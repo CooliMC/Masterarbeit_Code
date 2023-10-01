@@ -1,0 +1,42 @@
+[out:json][bbox:{{bbox}}][timeout:800];
+
+// Resolve all residential building and save it to a parameter
+(
+  relation["addr:street"]["building"~"^(apartments|house|semidetached_house)$"];
+  (
+ 	node["addr:street"][!"amenity"][!"shop"][!"name"][!"entrance"][!"email"][!"operator"]; -
+    node[~"^disused:.*$"~"."];
+  );
+  way["addr:street"]["building"~"^(apartments|barracks|bungalow|detached|dormitory|farm|house|houseboat|residential|semidetached_house|static_caravan|stilt_house|terrace)$"];
+  way["addr:street"]["building"="yes"][!"amenity"][!"historic"][!"website"][!"opening_hours"][!"leisure"][!"landuse"][!"name"][!"man_made"][!"operator"][!"product"][!"aeroway"];
+)->.apartments;
+
+
+// Resolve the are of the given postcode and save it to a parameter
+rel["boundary"="postal_code"]["postal_code"="38118"]->.postcode_area;
+
+// Convert the postcode to a map area and save it to a parameter
+.postcode_area map_to_area ->.postcode_maparea;
+
+// Filter all relations, nodes and ways in .apartment
+(
+  relation.apartments(area.postcode_maparea);
+  node.apartments(area.postcode_maparea);
+  way.apartments(area.postcode_maparea);
+)->.postcode_apartments;
+
+// Union the postcode aparartments and postcode area
+(.postcode_apartments; .postcode_area;)->.result;
+
+// Display the result
+.result;
+
+// Return node, ways, relations as determined above
+out geom meta;
+
+// Color the nodes, ways and relations in different colors
+{{style:
+  relation[addr:street]{fill-color: red; color: black; fill-opacity: 0.3;}
+  node{fill-color: blue; color: black; fill-opacity: 0.3;}
+  way{fill-color: green; color: black; fill-opacity: 0.3;}
+}}

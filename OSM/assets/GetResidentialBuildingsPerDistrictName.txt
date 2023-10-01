@@ -1,0 +1,64 @@
+[out:json][bbox:{{bbox}}][timeout:800];
+
+// Resolve all residential building and save it to a parameter
+(
+  relation["addr:street"]["building"~"^(apartments|house|semidetached_house)$"];
+  (
+ 	node["addr:street"][!"amenity"][!"shop"][!"name"][!"entrance"][!"email"][!"operator"]; -
+    node[~"^disused:.*$"~"."];
+  );
+  way["addr:street"]["building"~"^(apartments|barracks|bungalow|detached|dormitory|farm|house|houseboat|residential|semidetached_house|static_caravan|stilt_house|terrace)$"];
+  way["addr:street"]["building"="yes"][!"amenity"][!"historic"][!"website"][!"opening_hours"][!"leisure"][!"landuse"][!"name"][!"man_made"][!"operator"][!"product"][!"aeroway"];
+)->.apartments;
+
+
+// Resolve the are of the given postcode and save it to a parameter
+rel["boundary"="postal_code"]["postal_code"="38118"]->.postcode_area;
+rel["boundary"="administrative"]["admin_level"="9"]["de:amtlicher_gemeindeschluessel"="03101000"]["name"="Westliches Ringgebiet"]->.postcode_area;
+
+// Convert the postcode to a map area and save it to a parameter
+.postcode_area map_to_area ->.postcode_maparea;
+
+// Filter all relations, nodes and ways in .apartment
+(
+  relation.apartments(area.postcode_maparea);
+  node.apartments(area.postcode_maparea);
+  way.apartments(area.postcode_maparea);
+)->.postcode_apartments;
+
+// Filter all nodes out for later node filtering
+(
+  relation.postcode_apartments;
+  way.postcode_apartments;
+)->.postcode_apartments_without_nodes;
+
+// Convert the postcode_apartments_without_nodes to a map area and save it to a parameter
+.postcode_apartments_without_nodes map_to_area ->.postcode_apartments_without_nodes_maparea;
+
+// Filter all nodes that overlapp with relations and ways to later filter them out from the result
+node.postcode_apartments(area.postcode_apartments_without_nodes_maparea)->.postcode_apartments_overlapping_nodes;
+
+// Remove the overlapping nodes from the postcode_apartments set
+(.postcode_apartments; - .postcode_apartments_overlapping_nodes;)->.postcode_apartments;
+
+// Filter all nodes that are too close to ways or relations in order to remove duplicated buildings
+node.postcode_apartments(around.postcode_apartments_without_nodes:5)->.postcode_apartments_removed_nodes;
+
+// Remove the duplicated nodes from the postcode_apartments set
+(.postcode_apartments; - .postcode_apartments_removed_nodes;)->.postcode_apartments;
+
+// Union the postcode aparartments and postcode area
+(.postcode_apartments; .postcode_area;)->.result;
+
+// Display the result
+.result;
+
+// Return node, ways, relations as determined above
+out geom meta;
+
+// Color the nodes, ways and relations in different colors
+{{style:
+  relation[addr:street]{fill-color: red; color: black; fill-opacity: 0.3;}
+  node{fill-color: blue; color: black; fill-opacity: 0.3;}
+  way{fill-color: green; color: black; fill-opacity: 0.3;}
+}}
