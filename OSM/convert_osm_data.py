@@ -23,6 +23,7 @@ def readJsonFile(path: str = ''):
         return json.load(json_file)
 
 def calcOsmNodeArea(node: dict):
+    # TODO: Take relation, find closest ways/relation, take area of them and do median of all in 200 meter radius, if there are non return error
     return 0
 
 def calcOsmWayArea(way: dict):
