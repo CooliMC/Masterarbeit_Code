@@ -1,36 +1,26 @@
-from .ElementType import ElementType
+from .ElementUtils import ElementUtils
 
 class Building():
-    def __init__(self, id: int, type: ElementType, sourceElement: dict = {}):
-        # Set the building parameters
-        self.id = id
-        self.type = type
-        self.sourceElement = sourceElement
+    def __init__(self, buildingElement: dict):
+        # Set the mandatory building parameters
+        self.id = ElementUtils.getIdentifier(buildingElement)
+        self.type = ElementUtils.getType(buildingElement)
+        self.coordinates = ElementUtils.getGeographicCoordinates(buildingElement)
+        self.baseArea = ElementUtils.getBaseArea(buildingElement)
 
-        #
-        self.latitude = latitude
-        self.longitude = logitude
-    
-
+        # Save the raw osm element for later use
+        self.sourceElement = buildingElement
+                
+        
     # Overwrite the string representation
     def __str__(self):
-        return f'Building(id={self.id}, type={self.type})'
+        return f'Building(id={self.id}, type={self.type}, coordinates={self.coordinates}, baseArea={self.baseArea})'
     
     # Overwrite the class representation
     def __repr__(self):
-        return f'Building(id={self.id}, type={self.type})'
+        return f'Building(id={self.id}, type={self.type}, coordinates={self.coordinates}, baseArea={self.baseArea})'
+    
 
-    # Take a the osm building element and convert it to a building
-    @staticmethod
-    def convertOsmBuilding(buildingElement: dict) -> 'Building':
-        # Check if the element has a necesarry parameters
-        if 'id' and 'type' not in buildingElement:
-            # If not return None
-            return None
-        
-        # Resolve the parameters and create the building
-        return Building(
-            id = buildingElement['id'],
-            type = ElementType.from_str(buildingElement['type']),
-            sourceElement = buildingElement
-        )
+    
+
+    

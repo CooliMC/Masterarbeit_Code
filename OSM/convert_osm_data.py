@@ -1,5 +1,4 @@
 import json
-import sys
 
 from geographiclib.polygonarea import PolygonArea
 from geographiclib.geodesic import Geodesic

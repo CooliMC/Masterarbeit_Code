@@ -15,16 +15,11 @@ class District:
 
         # Loop through the list of district elements
         for building in districtElements:
-            # Try to convert the osm element into a building
-            convertedBuilding = Building.convertOsmBuilding(building)
-            
-            # Check if the building could be converted
-            if (convertedBuilding == None):
-                # Continue with the next one
-                continue
-            
-            # Add the building to the list of buildings
-            convertedBuildings.append(convertedBuilding)
+            # Try to convert and append the osm element building
+            try: convertedBuildings.append(Building(building))
+
+            # Catch the exception and inform the user about the raised error
+            except Exception as ex: print(f'Coversion of osm element failed: {ex}')
         
         # Return the list of converted buildings
         return convertedBuildings
