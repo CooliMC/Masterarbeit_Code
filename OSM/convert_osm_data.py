@@ -3,7 +3,8 @@ import json
 from geographiclib.polygonarea import PolygonArea
 from geographiclib.geodesic import Geodesic
 
-from assets.osm.District import District
+from model.District import District
+from model.Building import Building
 
 def calcAreaByGeodesic(coordinates: [tuple] = []):
 	# Create the PolygonArea with the Geodesic.WGS84
@@ -85,20 +86,12 @@ def main():
     propertyData = readJsonFile('./assets/DataBS310.json')
     
     test = District(propertyData['elements'])
-    print(test.buildings)
+
+    print(f'OsmElementCount: { len(propertyData["elements"]) }')
+    print(test)
+    print(test.getBuildingList())
 
     return 0
-
-
-    # Loop through the list of building elements
-    for building in propertyData['elements']:
-        print(type(building))
-
-        # Calculate the area and add it to the properties
-        building['area'] = calcOsmBuildingArea(building)
-        if building['area'] == 0: print(building)
-    
-    #print(propertyData['elements'])
 
 
 # Execute the main() function

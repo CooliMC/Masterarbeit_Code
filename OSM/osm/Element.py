@@ -3,11 +3,44 @@ from .ElementType import ElementType
 from geographiclib.polygonarea import PolygonArea
 from geographiclib.geodesic import Geodesic
 
-class ElementUtils():
-    def __init__(self):
-        # Raise an error cause it is a static class
-        raise NotImplementedError('Static class with no instances')
+class Element():
+    def __init__(self, osmElement: dict):
+        # Set the mandatory element parameters
+        self.id = Element.getIdentifier(osmElement)
+        self.type = Element.getType(osmElement)
+        self.coordinates = Element.getGeographicCoordinates(osmElement)
+        self.baseArea = Element.getBaseArea(osmElement)
 
+        # Save the raw osmElement for further use
+        self.sourceElement = osmElement
+
+    # Getter function for the building identifier
+    def getIdentifier(self) -> int:
+        return self.id
+
+    # Getter function for the building elementType
+    def getType(self) -> ElementType:
+        return self.type
+
+    # Getter function for the building coordinates
+    def getCoordinates(self) -> tuple:
+        return self.coordinates
+    
+    # Getter function for the building baseArea
+    def getBaseArea(self) -> float:
+        return self.baseArea
+    
+    # Getter function for the building sourceElement
+    def getSourceElement(self) -> dict:
+        return self.sourceElement
+    
+    # Overwrite the string representation
+    def __str__(self):
+        return f'Element(id={self.id}, type={self.type}, coordinates={self.coordinates}, baseArea={self.baseArea})'
+    
+    # Overwrite the class representation
+    def __repr__(self):
+        return f'Element(id={self.id}, type={self.type}, coordinates={self.coordinates}, baseArea={self.baseArea})'
 
     #################################################################
     #################### Public Static Functions ####################
@@ -72,15 +105,49 @@ class ElementUtils():
         # Node with no boundary
         if osmElement['type'] == 'node':
             # Calculate the area and return it
-            return ElementUtils.__getNodeBaseArea(osmElement)
+            return Element.__getNodeBaseArea(osmElement)
         # Way with polygon bounds
         if osmElement['type'] == 'way':
             # Calculate the area and return it
-            return ElementUtils.__getWayBaseArea(osmElement)
+            return Element.__getWayBaseArea(osmElement)
         # Relation with multiple ways
         if osmElement['type'] == 'relation':
             # Calculate the area and return it
-            return ElementUtils.__getRelationBaseArea(osmElement)
+            return Element.__getRelationBaseArea(osmElement)
+
+    # Utils function to check for a given tag in the osmElement
+    @staticmethod
+    def hasTag(osmElement: dict, tagKey: str) -> bool:
+        # Check if the object has a tags key and check there for key
+        return (('tags' in osmElement) and (tagKey in osmElement['tags']))
+
+    # Utils function to check if the given osmElement is a boundary
+    @staticmethod
+    def isBoundary(osmElement: dict) -> bool:
+        # Check if the osmElement is a Relation
+        if Element.getType(osmElement) != ElementType.RELATION:
+            # No Boundary relation
+            return False
+        
+        # Check if the osmElement has a type tag
+        if not Element.hasTag(osmElement, 'type'):
+            # No Boundary type tag
+            return False
+        
+        # Check if the osmElement tag type is a boundary
+        return osmElement['tags']['type'] == 'boundary'
+    
+    # Function to filter boundary elements for a list of osmElements
+    @staticmethod
+    def filterBoundaryElements(osmElements: [dict]) -> [dict]:
+        # Use the built in filter and Element isDistrict function
+        return list(filter(Element.isBoundary, osmElements))
+    
+    # Function to filter district elements for a list of osmElements
+    @staticmethod
+    def filterBuildingElements(osmElements: [dict]) -> [dict]:
+        # Use the built in filter and Element isDistrict function
+        return list(filter(lambda x: not Element.isBoundary(x), osmElements))
 
 
     #################################################################
@@ -110,7 +177,7 @@ class ElementUtils():
             coordinates.append((coord['lat'], coord['lon']))
 
         # Use the coordinates to calculate the area
-        return ElementUtils.__calcAreaByGeodesic(coordinates)
+        return Element.__calcAreaByGeodesic(coordinates)
 
     # Utils function to get the base area of the osmRelationElement
     @staticmethod
@@ -131,7 +198,7 @@ class ElementUtils():
         # Loop through the members of the relation
         for members in relation['members']:
             # Add the getBaseArea for the member
-            memberAreaSum += ElementUtils.getBaseArea(members)
+            memberAreaSum += Element.getBaseArea(members)
 
         # Return the member area sum
         return memberAreaSum
