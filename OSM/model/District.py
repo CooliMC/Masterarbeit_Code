@@ -6,7 +6,7 @@ class District(Element):
     # Constructor of District, takes osm elements and converts them
     def __init__(self, osmElements: [dict]):
         # Filter the district elements from the osmElement list
-        districtElements = Element.filterBoundaryElements(osmElements)
+        districtElements = Element.FilterBoundaryElements(osmElements)
 
         # Check if there are multiple districts in the osmElement list and raise an error
         if len(districtElements) != 1: raise ValueError('No Boundary element found.')
@@ -15,12 +15,38 @@ class District(Element):
         super().__init__(districtElements[0])
 
         # Filter the buildings from the osmElements and convert them to building objects
-        self.buildings = District.convertOsmDistrict(Element.filterBuildingElements(osmElements))
+        self.buildings = District.convertOsmDistrict(Element.FilterBuildingElements(osmElements))
 
     # Get the list of district building elements
     def getBuildingList(self) -> [Building]:
         # Return the building list parameter
         return self.buildings
+    
+    # Get the number of district building elements
+    def getBuildingCount(self, excludeNoBaseArea: bool = False) -> int:
+        # Check if node filtering not necesarry and return the length
+        if not excludeNoBaseArea: return len(self.buildings)
+
+        # Filter all the element without a baseArea and count the list of element
+        return len(list(filter(lambda x: x.getBaseArea() != 0, self.buildings)))
+
+    # Get the average baseArea of the district buildings
+    def getAvarageBuildingBaseArea(self, excludeNoBaseArea: bool = True) -> float:
+        # Parameter to hold the baseAreaSum and buildingCounter
+        baseAreaSum = buildingCounter = 0
+        
+        # Loop through the list of district building
+        for building in self.buildings:
+            # Check if the building has a base area and excludeNoBaseArea
+            if ((building.getBaseArea() != 0) or (not excludeNoBaseArea)):
+                # Addd the building baseArea to the sum
+                baseAreaSum += building.getBaseArea()
+
+                # Increase the count of added buildings
+                buildingCounter += 1
+        
+        # Calculate the avarage baseArea of the district
+        return round(baseAreaSum / buildingCounter, 2)
 
     # Overwrite the string representation
     def __str__(self):
