@@ -19,6 +19,8 @@ def main():
     print(district)
     print(district.getBuildingList()[151])
 
+    print(district.mapResidentialsToBuildings()[:10])
+
     # Create the Simulation with the district
     simulation = Simulation(district)
 

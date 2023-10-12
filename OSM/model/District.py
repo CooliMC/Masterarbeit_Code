@@ -80,6 +80,46 @@ class District(Element):
         # Use the already implemented functions to calculate the avarage living space of district residents
         return round(self.getLivingSpace(fallbackBuildingBaseArea) / self.getPopulation(), 2)
 
+    def mapResidentialsToBuildings(self, fallbackBuildingBaseArea: float = None) -> [[Building, int]]:
+        # Check if the fallbackBuildingBaseArea is set
+        if (fallbackBuildingBaseArea is None):
+            # Fallback to the built-in getAvarageBuildingBaseArea function
+            fallbackBuildingBaseArea = self.getAvarageBuildingBaseArea(True)
+
+        # Resolve the avarageResidentLivingSpace for the district for the resident spreading
+        avarageResidentLivingSpace = self.getAvarageResidentLivingSpace(fallbackBuildingBaseArea)
+
+        # Add a list for the buidlingTuple
+        mappedResidentToBuilingList = []
+
+         # Loop through the list of district building
+        for building in self.buildings:
+            # Calculate the residents per building via the buildings livingSpace and districts avarageResidentLivingSpace
+            buildingResidents = (building.getLivingSpace(fallbackBuildingBaseArea) / avarageResidentLivingSpace)
+
+            # Add the current building to the list with the numeber of residents split up in whole and part number 
+            mappedResidentToBuilingList.append((building, int(buildingResidents), buildingResidents % 1))
+
+        # Sum up the whole number of residents that are already distributed over the buildings to calc the remaining ones
+        fullBuildingResidentsSum = sum(round(buildingTuple[1]) for buildingTuple in mappedResidentToBuilingList)
+
+        # Sort the list of buidlingTuple by the resident part number descending to distribute the remaining residents
+        mappedResidentToBuilingList = sorted(mappedResidentToBuilingList, key = lambda x: x[2], reverse=True)
+
+        # Loop over the first x buildingTuples of the sorted buidlingTuple list distribute the remaining residents
+        for buildingTupleIndex in range(0, (self.getPopulation() - fullBuildingResidentsSum), 1):
+            # Resolve the buildingTuple from the list to replace it
+            buildingTuple = mappedResidentToBuilingList[buildingTupleIndex]
+
+            # Add one remaining resident to the buildingTuple by overwriting the immutable tuple
+            mappedResidentToBuilingList[buildingTupleIndex] = (buildingTuple[0], buildingTuple[1] + 1)
+
+        # Remove the part number element from the buidlingTuple so the list will only have the building and whole number
+        mappedResidentToBuilingList[:] = [buidlingTuple[:2] for buidlingTuple in mappedResidentToBuilingList]
+
+        # Return the the list of residents per building
+        return mappedResidentToBuilingList
+
     # Overwrite the string representation
     def __str__(self):
         return f'District(id={self.sourceElement["id"]}, name={self.name}, population={self.population}, buildingCount={self.getBuildingCount()}, livingSpace={self.getLivingSpace()}, avarageBuildingBaseArea={self.getAvarageBuildingBaseArea()}, avarageBuildingLivingSpace={self.getAvarageBuildingLivingSpace()}, avarageResidentLivingSpace={self.getAvarageResidentLivingSpace()})'
