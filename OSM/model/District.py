@@ -15,13 +15,27 @@ class District(Element):
         super().__init__(districtElements[0])
 
         # Filter the buildings from the osmElements and convert them to building objects
-        self.buildings = District.convertOsmDistrict(Element.FilterBuildingElements(osmElements))
+        self.buildings = District.ConvertOsmDistrict(Element.FilterBuildingElements(osmElements))
 
+        # Set the optional district element parameters
+        self.name = District.GetName(self.sourceElement)
+        self.population = District.GetPopulation(self.sourceElement)
+
+    # Get the district element name
+    def getName(self) -> str:
+        # Return the district name parameter
+        return self.name
+    
+    # Get the district element population
+    def getPopulation(self) -> int:
+        # Return the district population parameter
+        return self.population
+    
     # Get the list of district building elements
     def getBuildingList(self) -> [Building]:
         # Return the building list parameter
         return self.buildings
-    
+
     # Get the number of district building elements
     def getBuildingCount(self, excludeNoBaseArea: bool = False) -> int:
         # Check if node filtering not necesarry and return the length
@@ -30,7 +44,16 @@ class District(Element):
         # Filter all the element without a baseArea and count the list of element
         return len(list(filter(lambda x: x.getBaseArea() != 0, self.buildings)))
 
-    # Get the average baseArea of the district buildings
+    def getLivingSpace(self, fallbackBuildingBaseArea: float = None) -> float:
+        # Check if the fallbackBuildingBaseArea is set
+        if (fallbackBuildingBaseArea is None):
+            # Fallback to the built-in getAvarageBuildingBaseArea function
+            fallbackBuildingBaseArea = self.getAvarageBuildingBaseArea(True)
+
+        # Sum up the living space of all buildings in the area with a given fallback and return the area
+        return round(sum(building.getLivingSpace(fallbackBuildingBaseArea) for building in self.buildings), 2)
+
+    # Get the avarage baseArea of the district buildings
     def getAvarageBuildingBaseArea(self, excludeNoBaseArea: bool = True) -> float:
         # Parameter to hold the baseAreaSum and buildingCounter
         baseAreaSum = buildingCounter = 0
@@ -47,18 +70,56 @@ class District(Element):
         
         # Calculate the avarage baseArea of the district
         return round(baseAreaSum / buildingCounter, 2)
+    
+    # Get the avarage livingSpace of the district buildings
+    def getAvarageBuildingLivingSpace(self, fallbackBuildingBaseArea: float = None) -> float:
+        # Use the already implemented functions to calculate the avarage living space of district buildings
+        return round(self.getLivingSpace(fallbackBuildingBaseArea) / self.getBuildingCount(False), 2)
+
+    def getAvarageResidentLivingSpace(self, fallbackBuildingBaseArea: float = None) -> float:
+        # Use the already implemented functions to calculate the avarage living space of district residents
+        return round(self.getLivingSpace(fallbackBuildingBaseArea) / self.getPopulation(), 2)
 
     # Overwrite the string representation
     def __str__(self):
-        return f'District(id={self.sourceElement["id"]}, buildingCount={len(self.buildings)})'
+        return f'District(id={self.sourceElement["id"]}, name={self.name}, population={self.population}, buildingCount={self.getBuildingCount()}, livingSpace={self.getLivingSpace()}, avarageBuildingBaseArea={self.getAvarageBuildingBaseArea()}, avarageBuildingLivingSpace={self.getAvarageBuildingLivingSpace()}, avarageResidentLivingSpace={self.getAvarageResidentLivingSpace()})'
     
     # Overwrite the class representation
     def __repr__(self):
-        return f'District(id={self.sourceElement["id"]}, buildingCount={len(self.buildings)})'
+        return f'District(id={self.sourceElement["id"]}, name={self.name}, population={self.population}, buildingCount={self.getBuildingCount()}, livingSpace={self.getLivingSpace()}, avarageBuildingBaseArea={self.getAvarageBuildingBaseArea()}), avarageBuildingLivingSpace={self.getAvarageBuildingLivingSpace()}, avarageResidentLivingSpace={self.getAvarageResidentLivingSpace()})'
 
-    # Take a list of osm json elements and convert them to buildings
+    #################################################################
+    #################### Public Static Functions ####################
+    #################################################################
+
+    # Utils function to get the name of the osm element tags
     @staticmethod
-    def convertOsmDistrict(districtElements: [dict]) -> [Building]:
+    def GetName(districtElement: dict) -> str:
+        # Check if the district element has a name tag
+        if District.HasTag(districtElement, 'name'):
+            # Resolve and return the elements name tage
+            return districtElement['tags']['name']
+        
+        # Return a default fallback
+        return 'N/A'
+    
+    # Utils function to get the name of the osm element tags
+    @staticmethod
+    def GetPopulation(districtElement: dict) -> int:
+        # Check if the district element has a population tag
+        if District.HasTag(districtElement, 'population'):
+            # Resolve and return the elements population tage
+            try: return int(districtElement['tags']['population'])
+
+            # Except a ValueError and print out a message to explain the error
+            except ValueError: print("District tag 'population' is no valid number.")
+        
+        # Return a default fallback
+        return 0
+
+    # Utils function convert osm elements into buildings
+    @staticmethod
+    def ConvertOsmDistrict(districtElements: [dict]) -> [Building]:
         # Createn an empty list for the converted buildings
         convertedBuildings = []
 
@@ -72,5 +133,4 @@ class District(Element):
         
         # Return the list of converted buildings
         return convertedBuildings
-    
     

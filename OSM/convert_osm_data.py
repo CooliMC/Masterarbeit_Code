@@ -16,7 +16,7 @@ def main():
     # Create a district with building from the data
     district = District(propertyData['elements'])
 
-    print(f'Avarage District Building BaseAre: {district.getAvarageBuildingBaseArea()}')
+    print(district)
     print(district.getBuildingList()[151])
 
     # Create the Simulation with the district
