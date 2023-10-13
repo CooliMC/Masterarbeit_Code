@@ -39,6 +39,11 @@ class Element():
     def getSourceElement(self) -> dict:
         return self.sourceElement
     
+    # Getter function for the 2D distance between this and another building
+    def getDistanceTo(self, osmElement: 'Element') -> float:
+        # Use the internal functions to get the coordinates and calculate the geo distance
+        return Element.__CalcDistanceByGeodesic(self.getCoordinates(), osmElement.getCoordinates())
+    
     # Overwrite the string representation
     def __str__(self):
         return f'Element(id={self.id}, type={self.type}, coordinates={self.coordinates}, baseArea={self.baseArea}, levelCount={self.levelCount})'
@@ -73,25 +78,25 @@ class Element():
         # Try to resolve the type by its string represenation
         return ElementType.from_str(osmElement['type'])
 
-    # Utils function to extract coordinates (lon/lat) from the osmElement
+    # Utils function to extract coordinates (lat/lon) from the osmElement
     @staticmethod
     def GetGeographicCoordinates(osmElement: dict) -> tuple:
-        # Check for direct longitude/latitude coordinate properties
-        if (('lon' in osmElement) and ('lat' in osmElement)):
-            # Extract the longitude/latitude directly from the element properies
-            return (osmElement['lon'], osmElement['lat'])
+        # Check for direct latitude/longitude coordinate properties
+        if (('lat' in osmElement) and ('lon' in osmElement)):
+            # Extract the latitude/longitude directly from the element properies
+            return (osmElement['lat'], osmElement['lon'])
         
         # Check for indirect bounds to calc the coordinates
         if ('bounds' in osmElement):
             # Extract the bounds property from the element
             buildingBounds = osmElement['bounds']
 
-            # Calculate the avg longitude and latitude by their min/max values
-            buildingLon = round((buildingBounds['minlon'] + buildingBounds['maxlon']) / 2, 7)
+            # Calculate the avg latitude and longitude by their min/max values
             buildingLat = round((buildingBounds['minlat'] + buildingBounds['maxlat']) / 2, 7)
+            buildingLon = round((buildingBounds['minlon'] + buildingBounds['maxlon']) / 2, 7)
 
             # Set the calculated values as the coordinates
-            return (buildingLon, buildingLat)
+            return (buildingLat, buildingLon)
         
         # Check for converted element with geometry properties
         if ('geometry' in osmElement):
@@ -99,7 +104,7 @@ class Element():
             buildingCoordinates = osmElement['geometry']['coordinates']
 
             # Set the coordinates from the converted geometry coordinates
-            return (buildingCoordinates[0], buildingCoordinates[1])
+            return (buildingCoordinates[1], buildingCoordinates[0])
         
         # No coordinate based properties found, raise a value error with a dedicated message
         raise ValueError('Coordinate parameters (lat/lon, bounds, geometry) are missing.')
@@ -219,6 +224,15 @@ class Element():
         # Return the member area sum
         return memberAreaSum
     
+    # Utils function to calculate a geodesic distance by coordinates
+    @staticmethod
+    def __CalcDistanceByGeodesic(firstPoint: tuple, secondPoint: tuple) -> float:
+        # Use the Geodesic.WGS84 to create an Inverse with the first and second point lat/lon
+        geod = Geodesic.WGS84.Inverse(firstPoint[0], firstPoint[1], secondPoint[0], secondPoint[1])
+
+        # Extract the 2D distance and round it
+        return round(float(geod['s12']), 2)
+
     # Utils function to calculate a geodesic area by coordinates
     @staticmethod
     def __CalcAreaByGeodesic(coordinates: [tuple] = []) -> float:
