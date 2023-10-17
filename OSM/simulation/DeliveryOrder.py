@@ -1,6 +1,6 @@
 from model.Building import Building
 
-class Delivery():
+class DeliveryOrder():
     # Constructor the delivery with a given arguemnts
     def __init__(self, weight: int, destination: Building):
         # Save the weight [g]

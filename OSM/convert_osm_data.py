@@ -8,6 +8,12 @@ def readJsonFile(path: str = ''):
     with open(path, 'r') as json_file:
         # Load the json and return the data
         return json.load(json_file)
+    
+def writeJsonFile(path: str = '', content: str = ''):
+    # Open the JSON-File in Read-Only Mode
+    with open(path, 'w') as json_file:
+        # Write the json string to the file
+        json_file.write(content)
 
 def main():
     # Load the json property data from the assets

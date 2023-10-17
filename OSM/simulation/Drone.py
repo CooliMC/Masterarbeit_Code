@@ -1,8 +1,8 @@
-from .Delivery import Delivery
+from .DeliveryOrder import DeliveryOrder
 
 class Drone():
     # Constructor the drone with a given arguemnts
-    def __init__(self, batterySize: int, loadingCapacity: int, initialDeliveryList: [Delivery] = [], initialBatteryCharge: int = None):
+    def __init__(self, batterySize: int, loadingCapacity: int, initialDeliveryList: [DeliveryOrder] = [], initialBatteryCharge: int = None):
         # Check if the batterySize is a positive integer and if not raise a ValueError
         if (batterySize <= 0): raise ValueError('Invalid non-positive battery size.')
         
@@ -40,7 +40,7 @@ class Drone():
         return self.loadingCapacity
 
     # Getter function for the delivery list [Delivery[]]
-    def getDeliveryList(self) -> [Delivery]:
+    def getDeliveryList(self) -> [DeliveryOrder]:
         return self.deliveryList
 
     # Getter function for the current battery charge [w/h]
@@ -58,7 +58,7 @@ class Drone():
         return (self.getLoadingCapacity() - self.getOccupiedLoadingCapacity())
     
     # Check for constrains and pick up a new delivery for the drone
-    def pickUpDelivery(self, delivery: Delivery, queueSpace: int = 0) -> bool:
+    def pickUpDelivery(self, delivery: DeliveryOrder, queueSpace: int = 0) -> bool:
         # Check if the drone has enough loading capacity for the delivery
         if (self.getFreeLoadingCapacity() < delivery.getWeight()):
             # Reject the delivery
