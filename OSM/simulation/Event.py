@@ -1,6 +1,8 @@
+from typing import Callable
+
 class Event():
     # Constructor the Event with a given parameters
-    def __init__(self, eventFunction: function, eventParameters: []):
+    def __init__(self, eventFunction: Callable, eventParameters: []):
         # Save the eventFunction for later execution
         self.eventFunction = eventFunction
 

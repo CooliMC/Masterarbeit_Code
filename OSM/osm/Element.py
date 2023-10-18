@@ -24,7 +24,7 @@ class Element():
         return self.type
 
     # Getter function for the building coordinates
-    def getCoordinates(self) -> tuple:
+    def getCoordinates(self) -> (float, float):
         return self.coordinates
     
     # Getter function for the building baseArea

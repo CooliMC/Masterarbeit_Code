@@ -29,6 +29,11 @@ def main():
     # Create the Simulation with the district
     simulation = Simulation([district])
 
+    print(f'Station Cluster: {simulation.calculateChargingStationLocations(10)}')
+
+    for x in simulation.calculateChargingStationLocations(10):
+        print('{ "type": "Feature", "properties": { "@id": "ChargingStation" }, "geometry": { "type": "Point", "coordinates": [' + f'{x[1]}, {x[0]}' + '] } },')
+
     return 0
 
 
