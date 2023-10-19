@@ -18,6 +18,21 @@ class Simulation():
         # Save the current time for the simulation
         self.currentTime = 0
 
+    def getBookedEventList(self, sorted: bool = True) -> [Event]:
+        # Check if the list should be sorted by default
+        if not sorted: return self.bookedEventList
+
+        # Sort the booked event list by the timestamp and return the sorted list
+        return self.bookedEventList.sort(key=lambda x: x['timestamp'], reverse=False)
+
+    def getConditionalEventList(self) -> [Event]:
+        # Resolve and return the condfitional event list
+        return self.conditionalEventList
+    
+    def getCurrentTime(self) -> int:
+        # Resolv and return the current time
+        return self.currentTime
+
     def jumpToNextEvent(self):
         # Sort the bookedEventList by the timestamp to get the next event
         sortedBookedEvents = self.bookedEventList.sort(key=lambda x: x['timestamp'], reverse=False)
