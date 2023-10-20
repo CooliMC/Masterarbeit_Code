@@ -2,6 +2,7 @@ import json
 
 from model.District import District
 from simulation.Simulation import Simulation
+from simulation.Event import Event
 
 def readJsonFile(path: str = ''):
     # Open the JSON-File in Read-Only Mode
@@ -26,12 +27,19 @@ def main():
     print(district.getBuildingList()[151])
     print(district.mapResidentialsToBuildings()[:10])
 
+    print(f'Distance between {district.getBuildingList()[151]} and {district.getBuildingList()[201]} is {district.getBuildingList()[151].getDistanceTo(district.getBuildingList()[201])}')
+    print(f'Distance between {district.getBuildingList()[151]} and {district.getBuildingList()[201]} is {district.getBuildingList()[151].getDistanceTo(district.getBuildingList()[201].getCoordinates())}')
+    print(f'Distance between {district.getBuildingList()[151]} and {district.getBuildingList()[201]} is {district.getBuildingList()[151].getDistanceTo((52.2618746, 10.5035718))}')
+
     # Create the Simulation with the district
     simulation = Simulation([district])
 
-    print(f'Station Cluster: {simulation.calculateChargingStationLocations(10)}')
+    ev = Event(lambda *x: print(f'{x[0]} + {x[1]} = {x[2]}'), [1, 4, 5])
+    ev.executeFunction()
 
-    for x in simulation.calculateChargingStationLocations(10):
+    print(f'Station Cluster: {simulation.calculateChargingStationCoordinates(10, True)}')
+
+    for x in simulation.calculateChargingStationCoordinates(10):
         print('{ "type": "Feature", "properties": { "@id": "ChargingStation" }, "geometry": { "type": "Point", "coordinates": [' + f'{x[1]}, {x[0]}' + '] } },')
 
     return 0

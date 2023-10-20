@@ -39,10 +39,13 @@ class Element():
     def getSourceElement(self) -> dict:
         return self.sourceElement
     
-    # Getter function for the 2D distance between this and another building
-    def getDistanceTo(self, osmElement: 'Element') -> float:
+    # Getter function for the 2D distance between this and another element
+    def getDistanceTo(self, dstElement: 'Element | (float, float)') -> float:
+        # Check if the dstElement is an Element and resolve the coordinates
+        if isinstance(dstElement, Element): dstElement = dstElement.getCoordinates()
+
         # Use the internal functions to get the coordinates and calculate the geo distance
-        return Element.__CalcDistanceByGeodesic(self.getCoordinates(), osmElement.getCoordinates())
+        return Element.__CalcDistanceByGeodesic(self.getCoordinates(), dstElement)
     
     # Overwrite the string representation
     def __str__(self):

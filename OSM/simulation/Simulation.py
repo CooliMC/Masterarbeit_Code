@@ -69,7 +69,7 @@ class Simulation():
             # Check if at least one event was executed
             if not executedEvent: break
 
-    def calculateChargingStationLocations(self, stationCount: int) -> [(float, float)]:
+    def calculateChargingStationCoordinates(self, stationCount: int, takeNearestNeighbor: bool = False) -> [(float, float)]:
         # Use the integrated python loops to get the flatMapped distric building coordinates
         buildingCoordinateList = [building.getCoordinates() for district 
             in self.districtList for building in district.getBuildingList()]
@@ -81,11 +81,32 @@ class Simulation():
         # Fit the building coordinate list into the model
         kmeans.fit(buildingCoordinateList)
 
-        # Return the converted list of cluster centers as charging station locations coordinates
-        return list(map(lambda x: (round(x[0], 7), round(x[1], 7)), kmeans.cluster_centers_))
+        # Convert the list of cluster centers to charging station location coordinates for further compution
+        chargingStationLocationList = list(map(lambda x: (round(x[0], 7), round(x[1], 7)), kmeans.cluster_centers_))
+
+        # Check if the positions need to be mapped on the nearest neighbor
+        if not takeNearestNeighbor: return chargingStationLocationList
+
+        # List of nearest neighbors
+        nearestNeighborList = []
+
+        # Loop over the station per index
+        for stationIndex in range(stationCount):
+            # Resolve the temporary center charging station location
+            tempStationLocation = chargingStationLocationList[stationIndex]
+
+            # Loop over the list of labels per index and filter all index entries that are in the current cluster
+            mappedClusterDataIndexList = [ idx for idx, clu_num in enumerate(kmeans.labels_.tolist()) if clu_num == stationIndex ]
+
+
+            
+
+
+            print(f'Charging Location: {tempStationLocation}')
+            print(f'data_idx_within_i_cluster: {data_idx_within_i_cluster}')
+            print(f'------------------------------------------------------')
 
         
 
-
-
+    
     
