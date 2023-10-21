@@ -37,10 +37,8 @@ def main():
     ev = Event(lambda *x: print(f'{x[0]} + {x[1]} = {x[2]}'), [1, 4, 5])
     ev.executeFunction()
 
-    print(f'Station Cluster: {simulation.calculateChargingStationCoordinates(10, True)}')
-
-    for x in simulation.calculateChargingStationCoordinates(10):
-        print('{ "type": "Feature", "properties": { "@id": "ChargingStation" }, "geometry": { "type": "Point", "coordinates": [' + f'{x[1]}, {x[0]}' + '] } },')
+    for x in simulation.calculateChargingStationCoordinates(10, True):
+        print('{ "type": "Feature", "properties": { "@id": "ChargingStationLocation" }, "geometry": { "type": "Point", "coordinates": [' + f'{x[1]}, {x[0]}' + '] } },')
 
     return 0
 

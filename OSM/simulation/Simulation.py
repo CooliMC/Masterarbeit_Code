@@ -92,19 +92,17 @@ class Simulation():
 
         # Loop over the station per index
         for stationIndex in range(stationCount):
-            # Resolve the temporary center charging station location
-            tempStationLocation = chargingStationLocationList[stationIndex]
+            # Create a simple Building for the station to measure distances by using the center charging station location
+            tempStationObject = Building.CreateFromAttributes(1, 'node', chargingStationLocationList[stationIndex])
 
-            # Loop over the list of labels per index and filter all index entries that are in the current cluster
-            mappedClusterDataIndexList = [ idx for idx, clu_num in enumerate(kmeans.labels_.tolist()) if clu_num == stationIndex ]
+            # Loop over the list of labels per index, filter all index entries that are in the current cluster and resolve the corresponding data
+            mappedClusterDataList = [ buildingCoordinateList[idx] for idx, clu_num in enumerate(kmeans.labels_.tolist()) if clu_num == stationIndex ]
 
+            # Use the min function on the clusterDataList to finde the geographically clostest building for each charging station
+            nearestNeighborList.append(min(mappedClusterDataList, key=lambda x: tempStationObject.getDistanceTo(x)))
 
-            
-
-
-            print(f'Charging Location: {tempStationLocation}')
-            print(f'data_idx_within_i_cluster: {data_idx_within_i_cluster}')
-            print(f'------------------------------------------------------')
+        # Return the list of closest neighbors
+        return nearestNeighborList
 
         
 

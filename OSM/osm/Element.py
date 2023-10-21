@@ -1,5 +1,7 @@
 from .ElementType import ElementType
 
+from typing import Self
+
 from geographiclib.polygonarea import PolygonArea
 from geographiclib.geodesic import Geodesic
 
@@ -54,6 +56,28 @@ class Element():
     # Overwrite the class representation
     def __repr__(self):
         return f'Element(id={self.id}, type={self.type}, coordinates={self.coordinates}, baseArea={self.baseArea}, levelCount={self.levelCount})'
+
+
+    #################################################################
+    #################### Public Class Functions #####################
+    #################################################################
+
+    # Utils function to extract the id from the osmElement
+    @classmethod
+    def CreateFromAttributes(cls, identifier: int, type: 'ElementType | str', coordinates: (float, float), baseArea: float = None, levelCount: int = None) -> Self:
+        # Check if the type is no string and convert it into a string
+        if isinstance(type, ElementType): type = type.value
+
+        # Create an element with the given parameters to match the minimum required parameters
+        element = cls({ 'id': identifier, 'type': type, 'lat': coordinates[0], 'lon': coordinates[1] })
+
+        # Add the optional parameters to the element instace if defined
+        if baseArea is not None: element.baseArea = baseArea
+        if levelCount is not None: element.levelCount = levelCount
+
+        # Return the element
+        return element
+
 
     #################################################################
     #################### Public Static Functions ####################
