@@ -1,8 +1,12 @@
-from .DeliveryOrder import DeliveryOrder
-
 class Drone():
     # Constructor the drone with a given arguemnts
-    def __init__(self, batterySize: int, loadingCapacity: int, initialDeliveryList: [DeliveryOrder] = [], initialBatteryCharge: int = None):
+    def __init__(self, droneWeight: int, batterySize: float, loadingCapacity: int, initialBatteryCharge: float = None, powerPerKilogram: int = 150, maxSpeed: int = 10, batteryReserve: float = 0.1):
+        # Check if the droneWeight is a positive integer and if not raise a ValueError
+        if (droneWeight <= 0): raise ValueError('Invalid non-positive drone weight.')
+
+        # Save the droneWeight [g]
+        self.droneWeight = droneWeight
+
         # Check if the batterySize is a positive integer and if not raise a ValueError
         if (batterySize <= 0): raise ValueError('Invalid non-positive battery size.')
         
@@ -15,21 +19,23 @@ class Drone():
         # Save the loadingCapacity [g]
         self.loadingCapacity = loadingCapacity
 
-        # Check if the sum of deliveries in the initialDeliveryList exceeds the loadingCapacity
-        if (sum(delivery.getWeight() for delivery in initialDeliveryList) >= loadingCapacity):
-            # Raise a ValueError to explain the problem with the total weight and the loadingCapacity
-            raise ValueError('Total weight of initial delivery list exceeds the maximum loading capacity.')
-
-        # Save the deliveryList [Delivery[]]
-        self.deliveryList = initialDeliveryList
-
-        # Save the batterySize as the currentBatteryCharge [w/h]
+        # Save the batterySize as the currentBatteryCharge [Wh]
         self.currentBatteryCharge = batterySize
 
-        # Check if the initialBatteryCharge is a valid int and between zero and batterySize
-        if isinstance(initialBatteryCharge, int) and (0 <= initialBatteryCharge <= batterySize):
+        # Check if the initialBatteryCharge is a valid float and between zero and batterySize
+        if isinstance(initialBatteryCharge, float) and (0 <= initialBatteryCharge <= batterySize):
             # Set the currentBatteryCharge from the paramater
             self.currentBatteryCharge = initialBatteryCharge
+
+        # Save the powerPerKilogram [W/kg]
+        self.powerPerKilogram = powerPerKilogram
+
+        # Save the maxSpeed [m/s]
+        self.maxSpeed = maxSpeed
+
+        # Save the batteryReserve [Wh]
+        self.batteryReserve = (batterySize * batteryReserve)
+        
 
     # Getter function for the battery size [w/h]
     def getBatterySize(self) -> int:
@@ -39,32 +45,14 @@ class Drone():
     def getLoadingCapacity(self) -> int:
         return self.loadingCapacity
 
-    # Getter function for the delivery list [Delivery[]]
-    def getDeliveryList(self) -> [DeliveryOrder]:
-        return self.deliveryList
-
     # Getter function for the current battery charge [w/h]
     def getCurrentBatteryCharge(self) -> int:
         return self.currentBatteryCharge
-    
-    # Getter function for the occupied loading capacity [g]
-    def getOccupiedLoadingCapacity(self) -> int:
-        # Loop over the delivery list and sum up the weight of the deliveries
-        return sum(delivery.getWeight() for delivery in self.deliveryList)
-    
-    # Getter function for the free loading capacity [g]
-    def getFreeLoadingCapacity(self) -> int:
-        # Use the built-in functions to calculate the free loading capcity
-        return (self.getLoadingCapacity() - self.getOccupiedLoadingCapacity())
-    
-    # Check for constrains and pick up a new delivery for the drone
-    def pickUpDelivery(self, delivery: DeliveryOrder, queueSpace: int = 0) -> bool:
-        # Check if the drone has enough loading capacity for the delivery
-        if (self.getFreeLoadingCapacity() < delivery.getWeight()):
-            # Reject the delivery
-            return False
-        
-        # Add the delivery to the list on the given space
-        self.deliveryList.insert(queueSpace, delivery)
 
-    #def dropDelivery(self, delivery)
+    # Calculate the remaining flight time [h]
+    def getRemainingFlightTime(self) -> float:
+        return ((self.currentBatteryCharge - self.batteryReserve) / (((self.droneWeight + self.loadingCapacity) / 1000) * self.powerPerKilogram))
+    
+    # Calculate the remaining flight distance [m]
+    def getRemainingFlightDistance(self) -> float:
+        return self.maxSpeed * self.getRemainingFlightTime() * 3600

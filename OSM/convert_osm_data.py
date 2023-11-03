@@ -1,8 +1,13 @@
 import json
+import random
 
 from model.District import District
+from model.Building import Building
+
 from simulation.Simulation import Simulation
-from simulation.Event import Event
+from simulation.Solver import Solver
+from simulation.Drone import Drone
+from simulation.Order import Order
 
 def readJsonFile(path: str = ''):
     # Open the JSON-File in Read-Only Mode
@@ -18,27 +23,44 @@ def writeJsonFile(path: str = '', content: str = ''):
 
 def main():
     # Load the json property data from the assets
-    propertyData = readJsonFile('./assets/DataBS310.json')
+    propertyDataBS310 = readJsonFile('./assets/DataBS310.json')
     
-    # Create a district with building from the data
-    district = District(propertyData['elements'])
+    # Create a list of district with building from the data
+    districtList = [
+        District(propertyDataBS310['elements'])
+    ]
 
-    print(district)
-    print(district.getBuildingList()[151])
-    print(district.mapResidentialsToBuildings()[:10])
+    depot = Building.CreateFromAttributes(
+        1, 'node', (52.2607922, 10.5045533)
+    )
 
-    print(f'Distance between {district.getBuildingList()[151]} and {district.getBuildingList()[201]} is {district.getBuildingList()[151].getDistanceTo(district.getBuildingList()[201])}')
-    print(f'Distance between {district.getBuildingList()[151]} and {district.getBuildingList()[201]} is {district.getBuildingList()[151].getDistanceTo(district.getBuildingList()[201].getCoordinates())}')
-    print(f'Distance between {district.getBuildingList()[151]} and {district.getBuildingList()[201]} is {district.getBuildingList()[151].getDistanceTo((52.2618746, 10.5035718))}')
+    # Create a fleet of drones for the simulation
+    droneList = [
+        Drone(500, 200, 1000),
+        Drone(500, 200, 1000),
+        Drone(500, 200, 1000),
+        Drone(500, 200, 1000),
+        Drone(500, 200, 1000),
+    ]
 
     # Create the Simulation with the district
-    simulation = Simulation([district])
+    simulation = Simulation(districtList, droneList, depot, 10)
 
-    ev = Event(lambda *x: print(f'{x[0]} + {x[1]} = {x[2]}'), [1, 4, 5])
-    ev.executeFunction()
+    # Create 50 random orders for buildings in the district
+    orderList = list(map(lambda x: Order(x), random.choices(districtList[0].getBuildingList(), k=50)))
 
-    for x in simulation.calculateChargingStationCoordinates(10, True):
-        print('{ "type": "Feature", "properties": { "@id": "ChargingStationLocation" }, "geometry": { "type": "Point", "coordinates": [' + f'{x[1]}, {x[0]}' + '] } },')
+
+    solver = Solver(droneList, depot, orderList)
+
+    t = solver.getInitialSolution()
+
+    print(f'InitialSolution ResponseCode={t}')
+    print(f'InitialSolution:')
+    for _, drone in solver.solutionMatrix.items():
+        print(f'-> Drone xy:')
+        for order in drone:
+            print(f'---> Order (destination={order[0].getDestination()}, currentMilage={order[1]})')
+    
 
     return 0
 

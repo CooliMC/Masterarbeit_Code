@@ -4,70 +4,72 @@ from model.Building import Building
 from model.District import District
 
 from .Event import Event
+from .Drone import Drone
  
 class Simulation():
     # Constructor the simulation with a given district
-    def __init__(self, districtList: [District], initialBookedEvents: Event = [], initialConditionalEvents: Event = []):
+    def __init__(self, districtList: [District], droneList: [Drone], depot: 'Building | (float, float)', chargingStations: 'int | [(float, float)]', initialEvents: Event = [], initialTime: int = 0):
         # Save the districtList for later use
         self.districtList = districtList
 
+        # Save the droneList for later use
+        self.droneList = droneList
+
+        # Check if the depot is no building:
+        if not isinstance(depot, Building):
+            # Create the depot as a building from the given coordinates
+            depot = Building.CreateFromAttributes(1, 'node', depot)
+
+        # Save the depot for later use
+        self.depot = depot
+
+        # Check if the chargingStations is a valid int
+        if isinstance(chargingStations, int):
+            # Calculate the list of charging station coordinates and take the parameter as the count
+            chargingStations = self.calculateChargingStationCoordinates(chargingStations, True)
+
+        # Save the chargingStationList for later use
+        self.chargingStationList = chargingStations
+
         # Create empty event lists for the simulation
-        self.bookedEventList = initialBookedEvents
-        self.conditionalEventList = initialConditionalEvents
+        self.eventList = initialEvents
 
         # Save the current time for the simulation
-        self.currentTime = 0
+        self.currentTime = initialTime
 
-    def getBookedEventList(self, sorted: bool = True) -> [Event]:
-        # Check if the list should be sorted by default
-        if not sorted: return self.bookedEventList
-
-        # Sort the booked event list by the timestamp and return the sorted list
-        return self.bookedEventList.sort(key=lambda x: x['timestamp'], reverse=False)
-
-    def getConditionalEventList(self) -> [Event]:
-        # Resolve and return the condfitional event list
-        return self.conditionalEventList
+    def getEventList(self, sorted: bool = True) -> [Event]:
+        # Check and sort the list if necesarry
+        if (sorted == True): self.sortEventList()
     
+        # Return the eventList
+        return self.eventList
+
     def getCurrentTime(self) -> int:
-        # Resolv and return the current time
+        # Return the currentTime
         return self.currentTime
+    
+    def sortEventList(self) -> None:
+        # Sort the event list by the timestamp of each event
+        self.eventList.sort(key=lambda x: x.getTime(), reverse=False)
 
-    def jumpToNextEvent(self):
-        # Sort the bookedEventList by the timestamp to get the next event
-        sortedBookedEvents = self.bookedEventList.sort(key=lambda x: x['timestamp'], reverse=False)
+    def jumpToNextEvent(self) -> bool:
+        # Resolve the sorted event list
+        sortedEventList = self.getEventList(True)
 
-        # Set the currentTime to the timestamp of the next event
-        self.currentTime = nextBookedEvent[0]['timestamp']
+        # Check if there is a nextEvent in the list
+        if not sortedEventList: return False
 
-        # Loop over the list and execute all events with the current timestamp
-        while (self.currentTime == sortedBookedEvents[0]['timestamp']):
-            # Resolve the next event from the sorted booked events list
-            nextBookedEvent = sortedBookedEvents.pop(0)
+        # Remove and get the next event from the sorted list
+        nextEvent = sortedEventList.pop(0)
 
-            # Execute the event function with the given event parameters
-            nextBookedEvent['function'](*nextBookedEvent['parameters'])
+        # Update the current time to the event time
+        self.currentTime = nextEvent.getTime()
 
-        # Loop over the conditional event list to execute all events
-        while (True):
-            # Flag for event execution
-            executedEvent = False
+        # Execute the event function
+        nextEvent.executeFunction()
 
-            # Loop over the configtional event list
-            for conditionalEvent in self.conditionalEventList:
-                # Check if the condition of the event is met
-                if conditionalEvent['condition']():
-                    # Remove the event from the list
-                    self.conditionalEventList.remove(conditionalEvent)
-
-                    # Execute the event function with the given event parameter
-                    conditionalEvent['function'](*conditionalEvent['parameters'])
-
-                    # Mark the executed event parameter
-                    executedEvent = True
-
-            # Check if at least one event was executed
-            if not executedEvent: break
+        # Successfully executed next event
+        return True
 
     def calculateChargingStationCoordinates(self, stationCount: int, takeNearestNeighbor: bool = False) -> [(float, float)]:
         # Use the integrated python loops to get the flatMapped distric building coordinates
