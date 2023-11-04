@@ -35,7 +35,10 @@ class Drone():
 
         # Save the batteryReserve [Wh]
         self.batteryReserve = (batterySize * batteryReserve)
-        
+
+    # Getter function for the drone weight [g]
+    def getDroneWeight(self) -> int:
+        return self.droneWeight 
 
     # Getter function for the battery size [w/h]
     def getBatterySize(self) -> int:
@@ -46,12 +49,16 @@ class Drone():
         return self.loadingCapacity
 
     # Getter function for the current battery charge [w/h]
-    def getCurrentBatteryCharge(self) -> int:
-        return self.currentBatteryCharge
+    def getCurrentBatteryCharge(self, includeReserve: bool = False) -> int:
+        # Check if the battery reserve should be included
+        if includeReserve: return self.currentBatteryCharge
+        
+        # The current available battery charge minus the reserve
+        return (self.currentBatteryCharge - self.batteryReserve)
 
     # Calculate the remaining flight time [h]
     def getRemainingFlightTime(self) -> float:
-        return ((self.currentBatteryCharge - self.batteryReserve) / (((self.droneWeight + self.loadingCapacity) / 1000) * self.powerPerKilogram))
+        return (self.getCurrentBatteryCharge() / (((self.droneWeight + self.loadingCapacity) / 1000) * self.powerPerKilogram))
     
     # Calculate the remaining flight distance [m]
     def getRemainingFlightDistance(self) -> float:

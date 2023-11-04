@@ -1,14 +1,16 @@
 from sklearn.cluster import KMeans
 
+from model.Depot import Depot
 from model.Building import Building
 from model.District import District
+from model.ChargingStation import ChargingStation
 
 from .Event import Event
 from .Drone import Drone
  
 class Simulation():
     # Constructor the simulation with a given district
-    def __init__(self, districtList: [District], droneList: [Drone], depot: 'Building | (float, float)', chargingStations: 'int | [(float, float)]', initialEvents: Event = [], initialTime: int = 0):
+    def __init__(self, districtList: [District], droneList: [Drone], depot: Depot, chargingStations: 'int | [ChargingStation]', initialEvents: Event = [], initialTime: int = 0):
         # Save the districtList for later use
         self.districtList = districtList
 
@@ -37,6 +39,30 @@ class Simulation():
         # Save the current time for the simulation
         self.currentTime = initialTime
 
+    ################################################################################
+    ############################### GETTER FUNCTIONS ###############################
+    ################################################################################
+
+    def getDistrictList(self) -> [District]:
+        # Return the districtList
+        return self.districtList
+    
+    def getBuildingList(self) -> [Building]:
+        # Resolve the buildingList by flat mapping the district list with built-in functions
+        return [building for district in self.districtList for building in district.getBuildingList()]
+
+    def getDroneList(self) -> [Drone]:
+        # Return the droneList
+        return self.droneList
+
+    def getDepot(self) -> Building:
+        # Return the depot
+        return self.depot
+
+    def getChargingStationList(self) -> [ChargingStation]:
+        # Return the chargingStationList
+        return self.chargingStationList
+
     def getEventList(self, sorted: bool = True) -> [Event]:
         # Check and sort the list if necesarry
         if (sorted == True): self.sortEventList()
@@ -51,6 +77,10 @@ class Simulation():
     def sortEventList(self) -> None:
         # Sort the event list by the timestamp of each event
         self.eventList.sort(key=lambda x: x.getTime(), reverse=False)
+
+    ################################################################################
+    ############################# SIMULATION FUNCTIONS #############################
+    ################################################################################
 
     def jumpToNextEvent(self) -> bool:
         # Resolve the sorted event list
@@ -71,7 +101,11 @@ class Simulation():
         # Successfully executed next event
         return True
 
-    def calculateChargingStationCoordinates(self, stationCount: int, takeNearestNeighbor: bool = False) -> [(float, float)]:
+    ################################################################################
+    ############################### HELPER FUNCTIONS ###############################
+    ################################################################################
+
+    def calculateChargingStationCoordinates(self, stationCount: int, takeNearestNeighbor: bool = False) -> [ChargingStation]:
         # Use the integrated python loops to get the flatMapped distric building coordinates
         buildingCoordinateList = [building.getCoordinates() for district 
             in self.districtList for building in district.getBuildingList()]
@@ -101,7 +135,10 @@ class Simulation():
             mappedClusterDataList = [ buildingCoordinateList[idx] for idx, clu_num in enumerate(kmeans.labels_.tolist()) if clu_num == stationIndex ]
 
             # Use the min function on the clusterDataList to finde the geographically clostest building for each charging station
-            nearestNeighborList.append(min(mappedClusterDataList, key=lambda x: tempStationObject.getDistanceTo(x)))
+            nearestStationNeighbor = min(mappedClusterDataList, key=lambda x: tempStationObject.getDistanceTo(x))
+
+            # Create a charging station object with the station index and given coordinated as a simple node
+            nearestNeighborList.append(ChargingStation.CreateFromAttributes(stationIndex + 1, 'node', nearestStationNeighbor))
 
         # Return the list of closest neighbors
         return nearestNeighborList

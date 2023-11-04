@@ -5,9 +5,10 @@ from model.District import District
 from model.Building import Building
 
 from simulation.Simulation import Simulation
-from simulation.Solver import Solver
 from simulation.Drone import Drone
 from simulation.Order import Order
+
+from solver.Solver import Solver
 
 def readJsonFile(path: str = ''):
     # Open the JSON-File in Read-Only Mode
@@ -36,29 +37,28 @@ def main():
 
     # Create a fleet of drones for the simulation
     droneList = [
-        Drone(500, 200, 1000),
-        Drone(500, 200, 1000),
-        Drone(500, 200, 1000),
-        Drone(500, 200, 1000),
-        Drone(500, 200, 1000),
+        Drone(500, 150, 1000),
+        Drone(500, 150, 1000),
+        Drone(500, 150, 1000),
+        Drone(500, 150, 1000),
+        Drone(500, 150, 1000),
     ]
 
     # Create the Simulation with the district
     simulation = Simulation(districtList, droneList, depot, 10)
-
+    
     # Create 50 random orders for buildings in the district
-    orderList = list(map(lambda x: Order(x), random.choices(districtList[0].getBuildingList(), k=50)))
+    orderList = list(map(lambda x: Order(x), random.choices(districtList[0].getBuildingList(), k=500)))
 
+    solver = Solver(droneList, depot, simulation.getChargingStationList(), orderList)
 
-    solver = Solver(droneList, depot, orderList)
-
-    t = solver.getInitialSolution()
+    t = solver.generateInitialSolution()
 
     print(f'InitialSolution ResponseCode={t}')
     print(f'InitialSolution:')
-    for _, drone in solver.solutionMatrix.items():
-        print(f'-> Drone xy:')
-        for order in drone:
+    for drone, orders  in solver.solutionMatrix.items():
+        print(f'-> Drone (milageAvailable={drone.getRemainingFlightDistance()})')
+        for order in orders:
             print(f'---> Order (destination={order[0].getDestination()}, currentMilage={order[1]})')
     
 
