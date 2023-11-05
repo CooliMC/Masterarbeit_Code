@@ -4,7 +4,7 @@ from .Building import Building
  
 class District(Element):
     # Constructor of District, takes osm elements and converts them
-    def __init__(self, osmElements: [dict]):
+    def __init__(self, osmElements: list[dict]):
         # Filter the district elements from the osmElement list
         districtElements = Element.FilterBoundaryElements(osmElements)
 
@@ -32,7 +32,7 @@ class District(Element):
         return self.population
     
     # Get the list of district building elements
-    def getBuildingList(self) -> [Building]:
+    def getBuildingList(self) -> list[Building]:
         # Return the building list parameter
         return self.buildings
 
@@ -80,7 +80,7 @@ class District(Element):
         # Use the already implemented functions to calculate the avarage living space of district residents
         return round(self.getLivingSpace(fallbackBuildingBaseArea) / self.getPopulation(), 2)
 
-    def mapResidentialsToBuildings(self, fallbackBuildingBaseArea: float = None) -> [[Building, int]]:
+    def mapResidentialsToBuildings(self, fallbackBuildingBaseArea: float = None) -> list[tuple[Building, int]]:
         # Check if the fallbackBuildingBaseArea is set
         if (fallbackBuildingBaseArea is None):
             # Fallback to the built-in getAvarageBuildingBaseArea function
@@ -159,7 +159,7 @@ class District(Element):
 
     # Utils function convert osm elements into buildings
     @staticmethod
-    def ConvertOsmDistrict(districtElements: [dict]) -> [Building]:
+    def ConvertOsmDistrict(districtElements: list[dict]) -> list[Building]:
         # Createn an empty list for the converted buildings
         convertedBuildings = []
 

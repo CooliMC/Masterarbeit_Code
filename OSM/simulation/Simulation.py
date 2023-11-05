@@ -10,7 +10,7 @@ from .Drone import Drone
  
 class Simulation():
     # Constructor the simulation with a given district
-    def __init__(self, districtList: [District], droneList: [Drone], depot: Depot, chargingStations: 'int | [ChargingStation]', initialEvents: Event = [], initialTime: int = 0):
+    def __init__(self, districtList: list[District], droneList: list[Drone], depot: Depot, chargingStations: int | list[ChargingStation], initialEvents: list[Event] = [], initialTime: int = 0):
         # Save the districtList for later use
         self.districtList = districtList
 
@@ -43,27 +43,27 @@ class Simulation():
     ############################### GETTER FUNCTIONS ###############################
     ################################################################################
 
-    def getDistrictList(self) -> [District]:
+    def getDistrictList(self) -> list[District]:
         # Return the districtList
         return self.districtList
     
-    def getBuildingList(self) -> [Building]:
+    def getBuildingList(self) -> list[Building]:
         # Resolve the buildingList by flat mapping the district list with built-in functions
         return [building for district in self.districtList for building in district.getBuildingList()]
 
-    def getDroneList(self) -> [Drone]:
+    def getDroneList(self) -> list[Drone]:
         # Return the droneList
         return self.droneList
 
-    def getDepot(self) -> Building:
+    def getDepot(self) -> Depot:
         # Return the depot
         return self.depot
 
-    def getChargingStationList(self) -> [ChargingStation]:
+    def getChargingStationList(self) -> list[ChargingStation]:
         # Return the chargingStationList
         return self.chargingStationList
 
-    def getEventList(self, sorted: bool = True) -> [Event]:
+    def getEventList(self, sorted: bool = True) -> list[Event]:
         # Check and sort the list if necesarry
         if (sorted == True): self.sortEventList()
     
@@ -105,7 +105,7 @@ class Simulation():
     ############################### HELPER FUNCTIONS ###############################
     ################################################################################
 
-    def calculateChargingStationCoordinates(self, stationCount: int, takeNearestNeighbor: bool = False) -> [ChargingStation]:
+    def calculateChargingStationCoordinates(self, stationCount: int, takeNearestNeighbor: bool = False) -> list[ChargingStation]:
         # Use the integrated python loops to get the flatMapped distric building coordinates
         buildingCoordinateList = [building.getCoordinates() for district 
             in self.districtList for building in district.getBuildingList()]

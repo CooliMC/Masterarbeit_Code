@@ -2,7 +2,7 @@ from typing import Callable
 
 class Event():
     # Constructor the Event with a given parameters
-    def __init__(self, eventTime: int, eventFunction: Callable, eventParameters: []):
+    def __init__(self, eventTime: int, eventFunction: Callable, eventParameters: list):
         # Save the eventTime for later sorting
         self.eventTime = eventTime
         
@@ -20,7 +20,7 @@ class Event():
         # Resolve and return the function
         return self.eventFunction
     
-    def getParameters(self) -> []:
+    def getParameters(self) -> list:
         # Resolve and return the parameters
         return self.eventParameters
 

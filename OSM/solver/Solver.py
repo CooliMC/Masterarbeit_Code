@@ -9,7 +9,7 @@ from .ExitCode import ExitCode
 
 class Solver():
     # Constructor the order with a given arguemnts
-    def __init__(self, droneList: [Drone], depot: Depot, chargingStationList: [ChargingStation], orderList: [Order]):
+    def __init__(self, droneList: list[Drone], depot: Depot, chargingStationList: list[ChargingStation], orderList: list[Order]):
         # Save the list of drones
         self.droneList = droneList
 
@@ -29,23 +29,23 @@ class Solver():
     ############################### GETTER FUNCTIONS ###############################
     ################################################################################
 
-    def getDroneList(self) -> [Drone]:
+    def getDroneList(self) -> list[Drone]:
         # Return the droneList
         return self.droneList
     
-    def getDepot(self) -> [Depot]:
+    def getDepot(self) -> Depot:
         # Return the depot
         return self.depot
     
-    def getChargingStationList(self) -> [ChargingStation]:
+    def getChargingStationList(self) -> list[ChargingStation]:
         # Return the chargingStationList
         return self.chargingStationList
 
-    def getOrderList(self) -> [Order]:
+    def getOrderList(self) -> list[Order]:
         # Return the districtList
         return self.orderList
     
-    def getSolutionMatrix(self) -> dict:
+    def getSolutionMatrix(self) -> dict[Drone, list[tuple[Order, int]]]:
         # Return the solutionMatrix
         self.solutionMatrix
 
@@ -59,7 +59,7 @@ class Solver():
     def getNextOrder(self, drone: Drone) -> Order:
         return None
     
-    def generateInitialSolution(self, orderIndex: int = 0) -> ExitCode:
+    def generateInitialSolution(self, allowRecharge: bool = True, orderIndex: int = 0) -> ExitCode:
         # Check if all orders are assigned to a drone
         if (orderIndex == len(self.orderList)):
             # Return exit code for success
@@ -103,10 +103,10 @@ class Solver():
             self.solutionMatrix[drone].append((currentOrder, lastDroneMilage + lastToCurrentOrderDistance))
 
             # Check the recursive alogrithms backtracking response code
-            recursiveResponseCode = self.generateInitialSolution(orderIndex + 1)
+            recursiveResponseCode = self.generateInitialSolution(allowRecharge, orderIndex + 1)
 
             # Check if the order fails because no charging station in range
-            if (recursiveResponseCode == ExitCode.NO_CHARGING_STATION_IN_RANGE):
+            if (allowRecharge and (recursiveResponseCode == ExitCode.NO_CHARGING_STATION_IN_RANGE)):
                 # Order the drones to the closest charging station
                 for subDrone in self.droneList:
                     # Resolve the last order of the current subDrone
@@ -119,7 +119,7 @@ class Solver():
                     self.solutionMatrix[subDrone].append((Order(targetChargingStation, 0, 900), 0))
                 
                 # Check the recursive alogrithms backtracking response code
-                recursiveResponseCode = self.generateInitialSolution(orderIndex + 1)
+                recursiveResponseCode = self.generateInitialSolution(allowRecharge, orderIndex + 1)
 
                 # Check if the recursive algorithm was no success
                 if (recursiveResponseCode != ExitCode.SUCCESS):
@@ -137,15 +137,15 @@ class Solver():
         # Return the last given constrainFailureLevel exit code
         return constrainFailureLevel
 
-    def isChargingStationInRange(self, location: 'Building | (float, float)', range: float) -> bool:
+    def isChargingStationInRange(self, location: Building | tuple[float, float], range: float) -> bool:
         # Use the built-in filter function to check if a charging station is in range
         return next((True for x in self.chargingStationList if x.getDistanceTo(location) <= range), False)
 
-    def getChargingStationsInRange(self, location: 'Building | (float, float)', range: float) -> [ChargingStation]:
+    def getChargingStationsInRange(self, location: Building | tuple[float, float], range: float) -> list[ChargingStation]:
         # Use the built-in filter function to get all charging stations that are in range
         return [x for x in self.chargingStationList if x.getDistanceTo(location) <= range]
 
-    def getClosestChargingStation(self, location: 'Building | (float, float)') -> ChargingStation:
+    def getClosestChargingStation(self, location: Building | tuple[float, float]) -> ChargingStation:
         # Use the built-in min function to return the closest charging station from the list
         return min(self.chargingStationList, key=lambda x: x.getDistanceTo(location))
             

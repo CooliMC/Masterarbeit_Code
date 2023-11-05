@@ -26,7 +26,7 @@ class Element():
         return self.type
 
     # Getter function for the building coordinates
-    def getCoordinates(self) -> (float, float):
+    def getCoordinates(self) -> tuple[float, float]:
         return self.coordinates
     
     # Getter function for the building baseArea
@@ -42,7 +42,7 @@ class Element():
         return self.sourceElement
     
     # Getter function for the 2D distance between this and another element
-    def getDistanceTo(self, dstElement: 'Element | (float, float)') -> float:
+    def getDistanceTo(self, dstElement: 'Element | tuple[float, float]') -> float:
         # Check if the dstElement is an Element and resolve the coordinates
         if isinstance(dstElement, Element): dstElement = dstElement.getCoordinates()
 
@@ -64,7 +64,7 @@ class Element():
 
     # Utils function to extract the id from the osmElement
     @classmethod
-    def CreateFromAttributes(cls, identifier: int, type: 'ElementType | str', coordinates: (float, float), baseArea: float = None, levelCount: int = None) -> Self:
+    def CreateFromAttributes(cls, identifier: int, type: ElementType | str, coordinates: tuple[float, float], baseArea: float = None, levelCount: int = None) -> Self:
         # Check if the type is no string and convert it into a string
         if isinstance(type, ElementType): type = type.value
 
@@ -85,7 +85,7 @@ class Element():
 
     # Utils function to extract the id from the osmElement
     @staticmethod
-    def GetIdentifier(osmElement: dict) -> tuple:
+    def GetIdentifier(osmElement: dict) -> int:
         # Check for mandatory id property
         if 'id' not in osmElement:
             # If the manadatory property is missing, raise a ValueError
@@ -96,7 +96,7 @@ class Element():
 
     # Utils function to extract the type from the osmElement
     @staticmethod
-    def GetType(osmElement: dict) -> tuple:
+    def GetType(osmElement: dict) -> ElementType:
         # Check for mandatory type property
         if 'type' not in osmElement:
             # If the manadatory property is missing, raise a ValueError
@@ -187,13 +187,13 @@ class Element():
     
     # Function to filter boundary elements for a list of osmElements
     @staticmethod
-    def FilterBoundaryElements(osmElements: [dict]) -> [dict]:
+    def FilterBoundaryElements(osmElements: list[dict]) -> list[dict]:
         # Use the built in filter and Element isDistrict function
         return list(filter(Element.IsBoundary, osmElements))
     
     # Function to filter district elements for a list of osmElements
     @staticmethod
-    def FilterBuildingElements(osmElements: [dict]) -> [dict]:
+    def FilterBuildingElements(osmElements: list[dict]) -> list[dict]:
         # Use the built in filter and Element isDistrict function
         return list(filter(lambda x: not Element.IsBoundary(x), osmElements))
 
@@ -253,7 +253,7 @@ class Element():
     
     # Utils function to calculate a geodesic distance by coordinates
     @staticmethod
-    def __CalcDistanceByGeodesic(firstPoint: tuple, secondPoint: tuple) -> float:
+    def __CalcDistanceByGeodesic(firstPoint: tuple[float, float], secondPoint: tuple[float, float]) -> float:
         # Use the Geodesic.WGS84 to create an Inverse with the first and second point lat/lon
         geod = Geodesic.WGS84.Inverse(firstPoint[0], firstPoint[1], secondPoint[0], secondPoint[1])
 
@@ -262,7 +262,7 @@ class Element():
 
     # Utils function to calculate a geodesic area by coordinates
     @staticmethod
-    def __CalcAreaByGeodesic(coordinates: [tuple] = []) -> float:
+    def __CalcAreaByGeodesic(coordinates: list[tuple[float, float]] = []) -> float:
         # Create the PolygonArea with the Geodesic.WGS84
         polyArea = PolygonArea(Geodesic.WGS84, False)
 
