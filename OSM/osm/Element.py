@@ -157,8 +157,8 @@ class Element():
     def GetLevelCount(osmElement: dict) -> int:
         # Check if the osmElement has a building:level tag
         if Element.HasTag(osmElement, 'building:levels'):
-            # Return the building levels tag number
-            return osmElement['tags']['building:levels']
+            # Return the building levels tag number as a rounded integer with complex conversion
+            return round(float(str(osmElement['tags']['building:levels']).replace(",", ".")))
         
         # Default level count
         return 1

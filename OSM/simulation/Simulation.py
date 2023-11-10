@@ -1,3 +1,5 @@
+from random import choices
+
 from sklearn.cluster import KMeans
 
 from model.Depot import Depot
@@ -49,7 +51,11 @@ class Simulation():
     
     def getBuildingList(self) -> list[Building]:
         # Resolve the buildingList by flat mapping the district list with built-in functions
-        return [building for district in self.districtList for building in district.getBuildingList()]
+        return [building for district in self.getDistrictList() for building in district.getBuildingList()]
+
+    def getBuildingPopulationList(self) -> list[tuple[Building, int]]:
+        # Resolve the buildingPopulationList by flat mapping the district list with built-in functions
+        return [buildingPopulation for district in self.getDistrictList() for buildingPopulation in district.mapResidentialsToBuildings()]
 
     def getDroneList(self) -> list[Drone]:
         # Return the droneList
@@ -104,6 +110,17 @@ class Simulation():
     ################################################################################
     ############################### HELPER FUNCTIONS ###############################
     ################################################################################
+
+    def pickRandomBuildings(self, buildingCount: int, populationBased: bool = True) -> list [Building]:
+        # Check if the selection criteria is not population based and just pick random buildings
+        if not populationBased: return choices(self.getBuildingList(), k=buildingCount)
+
+        # Use the built-in function to split the building population list into two
+        buildingList, populationList = zip(*self.getBuildingPopulationList())
+
+        # Use the extended built-in function to pick buildings on a inhabitant cound based probability
+        return choices(buildingList, populationList, k=buildingCount)
+        
 
     def calculateChargingStationCoordinates(self, stationCount: int, takeNearestNeighbor: bool = False) -> list[ChargingStation]:
         # Use the integrated python loops to get the flatMapped distric building coordinates

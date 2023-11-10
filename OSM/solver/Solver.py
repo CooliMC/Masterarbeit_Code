@@ -136,6 +136,8 @@ class Solver():
 
         # Return the last given constrainFailureLevel exit code
         return constrainFailureLevel
+    
+    def generateInitialSolution(self, allowRecharge: bool = True, orderIndex: int = 0) -> ExitCode:
 
     def isChargingStationInRange(self, location: Building | tuple[float, float], range: float) -> bool:
         # Use the built-in filter function to check if a charging station is in range
