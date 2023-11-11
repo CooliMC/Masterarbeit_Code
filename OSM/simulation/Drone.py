@@ -1,16 +1,22 @@
 class Drone():
-    # Constructor the drone with a given arguemnts
-    def __init__(self, droneWeight: int, batterySize: float, loadingCapacity: int, initialBatteryCharge: float = None, powerPerKilogram: int = 150, maxSpeed: int = 10, batteryReserve: float = 0.1):
-        # Check if the droneWeight is a positive integer and if not raise a ValueError
-        if (droneWeight <= 0): raise ValueError('Invalid non-positive drone weight.')
+    # Define the number of seconds per hour
+    SECONDS_PER_HOUR_FACTOR = 3600
 
-        # Save the droneWeight [g]
-        self.droneWeight = droneWeight
+    # Define the kilo factor
+    KILO_FACTOR = 1000
+
+    # Constructor the drone with a given arguemnts
+    def __init__(self, tareWeight: int, batterySize: float, loadingCapacity: int, initialBatteryCharge: float = None, powerPerKilogram: int = 150, maxSpeed: int = 10, batteryReserve: float = 0.1):
+        # Check if the tareWeight is a positive integer and if not raise a ValueError
+        if (tareWeight <= 0): raise ValueError('Invalid non-positive drone weight.')
+
+        # Save the tareWeight [g]
+        self.tareWeight = tareWeight
 
         # Check if the batterySize is a positive integer and if not raise a ValueError
         if (batterySize <= 0): raise ValueError('Invalid non-positive battery size.')
         
-        # Save the batterySize [w/h]
+        # Save the batterySize [W/h]
         self.batterySize = batterySize
 
         # Check if the loadingCapacity is a positive integer and if not raise a ValueError
@@ -27,7 +33,7 @@ class Drone():
             # Set the currentBatteryCharge from the paramater
             self.currentBatteryCharge = initialBatteryCharge
 
-        # Save the powerPerKilogram [W/kg]
+        # Save the powerPerKilogram [W]
         self.powerPerKilogram = powerPerKilogram
 
         # Save the maxSpeed [m/s]
@@ -36,11 +42,15 @@ class Drone():
         # Save the batteryReserve [Wh]
         self.batteryReserve = (batterySize * batteryReserve)
 
-    # Getter function for the drone weight [g]
-    def getDroneWeight(self) -> int:
-        return self.droneWeight 
+    ################################################################################
+    ############################### GETTER FUNCTIONS ###############################
+    ################################################################################
 
-    # Getter function for the battery size [w/h]
+    # Getter function for the tare weight [g]
+    def getTareWeight(self) -> int:
+        return self.tareWeight 
+
+    # Getter function for the battery size [W/h]
     def getBatterySize(self) -> int:
         return self.batterySize
     
@@ -48,18 +58,38 @@ class Drone():
     def getLoadingCapacity(self) -> int:
         return self.loadingCapacity
 
-    # Getter function for the current battery charge [w/h]
+    # Getter function for the current battery charge [W/h]
     def getCurrentBatteryCharge(self, includeReserve: bool = False) -> int:
         # Check if the battery reserve should be included
         if includeReserve: return self.currentBatteryCharge
         
         # The current available battery charge minus the reserve
         return (self.currentBatteryCharge - self.batteryReserve)
+    
+    # Getter function for the power per kilogram [W]
+    def getPowerPerKilogram(self) -> int:
+        return self.powerPerKilogram
+    
+    # Getter function for the maximum speed [m/s]
+    def getMaximumSpeed(self) -> int:
+        return self.maxSpeed
+    
+    # Getter function for the battery reserve size [W/h]
+    def getMaximumSpeed(self) -> int:
+        return self.batteryReserve
 
-    # Calculate the remaining flight time [h]
+    ################################################################################
+    ################################ DRONE FUNCTIONS ###############################
+    ################################################################################
+
+    # Calculate the remaining flight time [s]
     def getRemainingFlightTime(self) -> float:
-        return (self.getCurrentBatteryCharge() / (((self.droneWeight + self.loadingCapacity) / 1000) * self.powerPerKilogram))
+        return (self.getCurrentBatteryCharge() / (((self.tareWeight + self.loadingCapacity) / self.KILO_FACTOR) * self.powerPerKilogram))
     
     # Calculate the remaining flight distance [m]
     def getRemainingFlightDistance(self) -> float:
-        return self.maxSpeed * self.getRemainingFlightTime() * 3600
+        return self.maxSpeed * self.getRemainingFlightTime() * self.SECONDS_PER_HOUR_FACTOR
+    
+    # Calculate the flight time for a given distance in meters [s]
+    def calculateFlightTime(self, distance: float) -> float:
+        return distance / self.maxSpeed

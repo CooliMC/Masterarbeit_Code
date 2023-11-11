@@ -1,5 +1,5 @@
 import json
-import random
+import time
 
 from model.District import District
 from model.Building import Building
@@ -9,6 +9,7 @@ from simulation.Drone import Drone
 from simulation.Order import Order
 
 from solver.Solver import Solver
+from solver.Solution import Solution
 
 from geojson import FeatureCollection, Feature, Point, LineString
 
@@ -75,6 +76,17 @@ def main():
     orderList = list(map(lambda x: Order(x), simulation.pickRandomBuildings(350)))
 
     solver = Solver(droneList, depot, simulation.getChargingStationList(), orderList)
+
+    # Temp Checks
+    start = time.time()
+    t1 = Solution.CalculateDistanceMatrix([depot] + simulation.getChargingStationList() + [order.getDestination() for order in orderList])
+    end = time.time()
+    print(f'Calculate the distance matrix in {(end - start) * 1000} ms')
+
+    d1 = depot
+    d2 = depot
+    print(f'Distance from {d1} to {d2} is {t1[d1][d2]} m')
+    return 0
 
     t = solver.generateInitialSolution()
 

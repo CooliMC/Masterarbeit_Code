@@ -137,7 +137,8 @@ class Solver():
         # Return the last given constrainFailureLevel exit code
         return constrainFailureLevel
     
-    def generateInitialSolution(self, allowRecharge: bool = True, orderIndex: int = 0) -> ExitCode:
+    def generateInitialSolutions(self, allowRecharge: bool = True, orderIndex: int = 0) -> ExitCode:
+        return 0
 
     def isChargingStationInRange(self, location: Building | tuple[float, float], range: float) -> bool:
         # Use the built-in filter function to check if a charging station is in range
@@ -150,4 +151,12 @@ class Solver():
     def getClosestChargingStation(self, location: Building | tuple[float, float]) -> ChargingStation:
         # Use the built-in min function to return the closest charging station from the list
         return min(self.chargingStationList, key=lambda x: x.getDistanceTo(location))
-            
+    
+
+    def getDroneTour(self, drone: Drone, includeChargingOrders: bool = True) -> list[Order]:
+        # Check if the drone tour list should include the charging orders and return the mapped list
+        if includeChargingOrders: return [droneOrder[0] for droneOrder in self.solutionMatrix[drone]]
+
+        # Use the built in filter function to check if the order destination is no charging station
+        return [droneOrder[0] for droneOrder in self.solutionMatrix[drone] 
+                if droneOrder[0].getDestination() not in self.chargingStationList]
