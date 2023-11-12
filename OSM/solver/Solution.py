@@ -74,29 +74,59 @@ class Solution():
         # Calculate the score of the by the time with a formular like this:
         # sum(time of each drone) * (1 + (longestDroneTime - shortestDroneTime))
 
-    def getShiftSolutions(self, orderIndex: int) -> list[Self]:
-        # Resolve the order form the list of orders to compare
-        currentOrder = self.orderList[orderIndex]
+    def getTwoOptSolutions(self, drone: Drone) -> list[Self]:
+        # Resolve the tour of the given drone
+        orderTour = self.getDroneTour(drone)
 
-        # Create an empty solution list for the shifts
-        shiftSolutionList = []
+        # TODO: Dont know how to do this? Normally 2Opt is implemented in the solver? How to get a better neighborhood?
 
-        # Loop through the list of drones 
+        # Loop over the tour of the drone for potential edges
+        for tourIndex in range(0, len(orderTour) -1, 1):
+            1
 
-        # TODO: Implement the shift
+        return 1
 
-    def getSwapSolutions(self, orderIndex: int) -> list[Self]:
+    def getRelocateSolutions(self, order: Order) -> list[Self]:
+        # Resolve the drone of the given order
+        orderDrone = self.getDroneByOrder(order)
+
+        # Create an empty solution list for the relocates
+        relocateSolutionList = []
+
+        # Loop through the list of drones
+        for partnerDrone in self.droneList:
+            # Check if the relocate partner is the same drone and continue
+            if (partnerDrone == orderDrone): continue
+
+            # Resolve the tour of the partner drone without recharges
+            partnerTour = self.getDroneTour(partnerDrone, False)
+
+            # Loop over the tour of the partner drone for relocates
+            for partnerTourIndex in range(0, len(partnerTour) -1, 1):
+                
+
+            # TODO: Implement the shift
+
+        # Return the relocateSolutionList
+        return relocateSolutionList
+
+    def getExchangeSolutions(self, orderIndex: int) -> list[Self]:
         # Resolve the order form the list of orders to compare
         currentOrder = self.orderList[orderIndex]
 
         # Create an empty solution list for the swaps
-        swapSolutionList = []
+        exchangeSolutionList = []
 
         # Loop through all orders to search for swap partners
         for swapPartnerOrder in self.orderList:
             # Check if the swap partner is the current order and continue
+
             if (swapPartnerOrder == currentOrder): continue
 
+            # TODO: Implement the swap
+
+        # Return the exchangeSolutionList
+        return exchangeSolutionList
 
     def getCrossSolutions(self, orderIndex: int) -> list[Self]:
         return []
@@ -104,6 +134,14 @@ class Solution():
     ################################################################################
     ############################### SUPPORT FUNCTIONS ##############################
     ################################################################################
+
+    def getOrderDistance(self, sourceOrder: Order, destinationOrder: Order) -> float:
+        # Use the precalculated distanceMatrix to get the distance between the orders
+        return self.distanceMatrix[sourceOrder.getDestination()][destinationOrder.getDestination()]
+
+    def getDroneByOrder(self, order: Order) -> Drone:
+        # Use the built-in function to get the drone that has given order in its orderList
+        return next(drone for drone, orderTuple in self.solutionMatrix.items() if orderTuple[0] == order)
 
     def getDroneTour(self, drone: Drone, includeChargingOrders: bool = True) -> list[Order]:
         # Check if the drone tour list should include the charging orders and return the mapped list
@@ -114,10 +152,20 @@ class Solution():
                 if droneOrder[0].getDestination() not in self.chargingStationList]
     
     def getDroneTourDistance(self, drone: Drone, includeChargingOrders: bool = True) -> float:
-        # Resolve the droneTour by using the getDroneTour function
-        droneTour = self.getDroneTour(drone, includeChargingOrders)
+        # Use the getDroneTour and getTourDistance function to get the drone tour distance
+        return self.getTourDistance(self.getDroneTour(drone, includeChargingOrders))
 
-        return sum()
+    def getTourDistance(self, tour: list[Order]) -> float:
+        # Initialize the tour distance
+        tourDistance = 0
+
+        # Loop over the tour in stepped pairs
+        for index in range(0, len(tour) - 1, 1):
+            # Calculate and add the distance between the current and next order
+            tourDistance += self.getOrderDistance(tour[index], tour[index + 1])
+
+        # Return the summed up destinations
+        return tourDistance
 
     ################################################################################
     ############################### SUPPORT FUNCTIONS ##############################
