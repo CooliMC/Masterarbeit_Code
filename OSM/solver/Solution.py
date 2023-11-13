@@ -169,6 +169,9 @@ class Solution():
 
         droneTour = droneTour[:(firstPathIndex + 1)] + droneTour[secondPathIndex:firstPathIndex:-1] + droneTour[(secondPathIndex + 1):]
 
+        # TODO: Clone the current Solution, replace matrix by dict(matrix) and all lists in it by list(list) to have deep copies. Then set the new drone tour.
+        # Note: Maybe remove the distance from the solution matrix and move it a temporary list in the solver function cause it is not necesarry outside.
+
         return 0
 
     ################################################################################
