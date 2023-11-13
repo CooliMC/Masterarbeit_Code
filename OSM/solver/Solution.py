@@ -66,7 +66,7 @@ class Solution():
         self.solutionMatrix
 
     ################################################################################
-    ############################## SOLUTION FUNCTIONS ##############################
+    ############################### SCORE FUNCTIONS ################################
     ################################################################################
 
     def getTimeScore(self) -> float:
@@ -74,17 +74,36 @@ class Solution():
         # Calculate the score of the by the time with a formular like this:
         # sum(time of each drone) * (1 + (longestDroneTime - shortestDroneTime))
 
-    def getTwoOptSolutions(self, drone: Drone) -> list[Self]:
-        # Resolve the tour of the given drone
-        orderTour = self.getDroneTour(drone)
+    ################################################################################
+    ############################ NEIGHBORHOOD FUNCTIONS ############################
+    ################################################################################
 
-        # TODO: Dont know how to do this? Normally 2Opt is implemented in the solver? How to get a better neighborhood?
+    def getTwoOptSolutions(self, drone: Drone, maximumLengthDelta: float = 0) -> list[Self]:
+        # Resolve the tour (length) of the given drone
+        orderTour = self.getDroneTour(drone, False)
+        tourLength = self.getTourDistance(orderTour)
+
+        # Create an empty solution list for the two-opt
+        twoOptSolutionList = []
 
         # Loop over the tour of the drone for potential edges
-        for tourIndex in range(0, len(orderTour) -1, 1):
-            1
+        for outerTourIndex in range(0, len(orderTour) - 2, 1):
+            # Loop over the rest of the tours after this to check for potential swaps
+            for innerTourIndex in range(outerTourIndex + 1, len(orderTour) -1, 1):
+                # Use a dedicated function to calculate the path delta for the two-opt
+                lengthDelta = self.calculateTwoOptPathLengthDelta(
+                    (orderTour[outerTourIndex], orderTour[outerTourIndex + 1]), 
+                    (orderTour[innerTourIndex], orderTour[innerTourIndex + 1])
+                )
 
-        return 1
+                # Check if the lengthDelta is smaller then the upper boundary
+                if (lengthDelta <= maximumLengthDelta):
+                    # Create the two-opt solution by changing the given paths
+                    twoOptSolutionList.append(self.createTwoOptSolution(
+                        drone, outerTourIndex, innerTourIndex))
+
+        # Return the two-opt solution list
+        return twoOptSolutionList
 
     def getRelocateSolutions(self, order: Order) -> list[Self]:
         # Resolve the drone of the given order
@@ -103,7 +122,7 @@ class Solution():
 
             # Loop over the tour of the partner drone for relocates
             for partnerTourIndex in range(0, len(partnerTour) -1, 1):
-                
+                1
 
             # TODO: Implement the shift
 
@@ -131,6 +150,27 @@ class Solution():
     def getCrossSolutions(self, orderIndex: int) -> list[Self]:
         return []
     
+    ################################################################################
+    ############################### Two-Opt FUNCTIONS ##############################
+    ################################################################################
+
+    def calculateTwoOptPathLengthDelta(self, firstPath: tuple[Order, Order], secondPath: tuple[Order, Order]) -> float:
+        # Use the precalculation to get the path delete for two-opt swap
+        return (
+            self.getOrderDistance(firstPath[0], secondPath[0])
+            + self.getOrderDistance(firstPath[1], secondPath[1])
+            - self.getOrderDistance(firstPath[0], firstPath[1])
+            - self.getOrderDistance(secondPath[0], secondPath[1])
+        )
+    
+    def createTwoOptSolution(self, drone: Drone, firstPathIndex: int, secondPathIndex: int, droneTour: list[Order] = None) -> Self:
+        # Check if the droneTour parameter is set or resolve it
+        if droneTour is None: droneTour = self.getDroneTour(drone)
+
+        droneTour = droneTour[:(firstPathIndex + 1)] + droneTour[secondPathIndex:firstPathIndex:-1] + droneTour[(secondPathIndex + 1):]
+
+        return 0
+
     ################################################################################
     ############################### SUPPORT FUNCTIONS ##############################
     ################################################################################
