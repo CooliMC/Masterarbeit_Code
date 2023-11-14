@@ -1,3 +1,4 @@
+from copy import copy
 from typing import Self
 
 from simulation.Drone import Drone
@@ -30,8 +31,8 @@ class Solution():
         # Precalculate the distance matrix between the different buildings 
         self.distanceMatrix = Solution.CalculateDistanceMatrix(self.buildingList)
         
-        # Create and prefilled solution matrix with the drones as key and list of orders and distance
-        self.solutionMatrix = dict(map(lambda drone: (drone, [(Order(depot), 0)]), self.droneList))
+        # Create and prefilled solution matrix with the drones as key and value list of orders
+        self.solutionMatrix = dict(map(lambda drone: (drone, [Order(depot)]), self.droneList))
 
     ################################################################################
     ############################### GETTER FUNCTIONS ###############################
@@ -61,7 +62,7 @@ class Solution():
         # Return the distanceMatrix
         return self.distanceMatrix
     
-    def getSolutionMatrix(self) -> dict[Drone, list[tuple[Order, int]]]:
+    def getSolutionMatrix(self) -> dict[Drone, list[Order]]:
         # Return the solutionMatrix
         self.solutionMatrix
 
@@ -100,7 +101,9 @@ class Solution():
                 if (lengthDelta <= maximumLengthDelta):
                     # Create the two-opt solution by changing the given paths
                     twoOptSolutionList.append(self.createTwoOptSolution(
-                        drone, outerTourIndex, innerTourIndex))
+                        drone, outerTourIndex, innerTourIndex, orderTour))
+                    
+                    # TODO: Calc new length with delta, calc charging stops and add them
 
         # Return the two-opt solution list
         return twoOptSolutionList
@@ -155,7 +158,7 @@ class Solution():
     ################################################################################
 
     def calculateTwoOptPathLengthDelta(self, firstPath: tuple[Order, Order], secondPath: tuple[Order, Order]) -> float:
-        # Use the precalculation to get the path delete for two-opt swap
+        # Use the precalculation to get the path delta for two-opt swap
         return (
             self.getOrderDistance(firstPath[0], secondPath[0])
             + self.getOrderDistance(firstPath[1], secondPath[1])
@@ -167,32 +170,53 @@ class Solution():
         # Check if the droneTour parameter is set or resolve it
         if droneTour is None: droneTour = self.getDroneTour(drone)
 
-        droneTour = droneTour[:(firstPathIndex + 1)] + droneTour[secondPathIndex:firstPathIndex:-1] + droneTour[(secondPathIndex + 1):]
+        # Reconstruct the droneTour by performing the two-opt swap with the pathIndex
+        droneTour = droneTour[:(firstPathIndex + 1)] + droneTour[
+            secondPathIndex:firstPathIndex:-1] + droneTour[(secondPathIndex + 1):]
 
-        # TODO: Clone the current Solution, replace matrix by dict(matrix) and all lists in it by list(list) to have deep copies. Then set the new drone tour.
-        # Note: Maybe remove the distance from the solution matrix and move it a temporary list in the solver function cause it is not necesarry outside.
+        # Create a partly deep copy of the solution
+        solutionCopy = self.getSolutionCopy(True)
 
-        return 0
+        # Update the orderList of the drone with the droneTour
+        solutionCopy.solutionMatrix[drone] = droneTour
+
+        # Return the modified solution copy
+        return solutionCopy
 
     ################################################################################
     ############################### SUPPORT FUNCTIONS ##############################
     ################################################################################
+
+    def getSolutionCopy(self) -> Self:
+        # Use the built-in function to copy the solution
+        solutionCopy = copy(self)
+
+        # Create a shallow copy of the solution matrix with dict function
+        solutionCopy.solutionMatrix = dict(solutionCopy.solutionMatrix)
+
+        # Loop over the shallow copy of the solution matrix
+        for drone, orderList in solutionCopy.solutionMatrix:
+            # Create a shallow copy of the orderList with the list function
+            solutionCopy.solutionMatrix[drone] = list(orderList)
+
+        # Return the solution copy
+        return solutionCopy
 
     def getOrderDistance(self, sourceOrder: Order, destinationOrder: Order) -> float:
         # Use the precalculated distanceMatrix to get the distance between the orders
         return self.distanceMatrix[sourceOrder.getDestination()][destinationOrder.getDestination()]
 
     def getDroneByOrder(self, order: Order) -> Drone:
-        # Use the built-in function to get the drone that has given order in its orderList
-        return next(drone for drone, orderTuple in self.solutionMatrix.items() if orderTuple[0] == order)
+        # Use the built-in function to get the drone that has the given order in its orderList
+        return next((drone for drone, orderList in self.solutionMatrix.items() if order in orderList), None)
 
     def getDroneTour(self, drone: Drone, includeChargingOrders: bool = True) -> list[Order]:
-        # Check if the drone tour list should include the charging orders and return the mapped list
-        if includeChargingOrders: return [droneOrder[0] for droneOrder in self.solutionMatrix[drone]]
+        # Check if the drone tour list should include the charging orders (default)
+        if includeChargingOrders: return self.solutionMatrix[drone]
 
         # Use the built in filter function to check if the order destination is no charging station
-        return [droneOrder[0] for droneOrder in self.solutionMatrix[drone] 
-                if droneOrder[0].getDestination() not in self.chargingStationList]
+        return [droneOrder for droneOrder in self.solutionMatrix[drone] 
+                if droneOrder.getDestination() not in self.chargingStationList]
     
     def getDroneTourDistance(self, drone: Drone, includeChargingOrders: bool = True) -> float:
         # Use the getDroneTour and getTourDistance function to get the drone tour distance
