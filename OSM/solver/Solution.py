@@ -80,9 +80,10 @@ class Solution():
     ################################################################################
 
     def getTwoOptSolutions(self, drone: Drone, maximumLengthDelta: float = 0) -> list[Self]:
-        # Resolve the tour (length) of the given drone
+        # Resolve the tour (length) and range of the given drone
         orderTour = self.getDroneTour(drone, False)
         tourLength = self.getTourDistance(orderTour)
+        droneRange = drone.getRemainingFlightDistance()
 
         # Create an empty solution list for the two-opt
         twoOptSolutionList = []
@@ -103,6 +104,11 @@ class Solution():
                     twoOptSolutionList.append(self.createTwoOptSolution(
                         drone, outerTourIndex, innerTourIndex, orderTour))
                     
+                    # Calculate the new tour length with the delta
+                    twoOptTourLength = tourLength + lengthDelta
+
+                    
+
                     # TODO: Calc new length with delta, calc charging stops and add them
 
         # Return the two-opt solution list

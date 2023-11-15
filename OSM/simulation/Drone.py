@@ -75,7 +75,7 @@ class Drone():
         return self.maxSpeed
     
     # Getter function for the battery reserve size [W/h]
-    def getMaximumSpeed(self) -> int:
+    def getBatteryReserveSize(self) -> int:
         return self.batteryReserve
 
     ################################################################################
