@@ -6,6 +6,7 @@ from model.Building import Building
 from model.ChargingStation import ChargingStation
 
 from .ExitCode import ExitCode
+from .Solution import Solution
 
 class Solver():
     # Constructor the order with a given arguemnts
@@ -21,9 +22,6 @@ class Solver():
 
         # Save the list of orders
         self.orderList = orderList
-
-        # Create and prefilled solution matrix with the drones as key and list of orders and distance
-        self.solutionMatrix = dict(map(lambda drone: (drone, [(Order(depot), 0)]), self.droneList))
 
     ################################################################################
     ############################### GETTER FUNCTIONS ###############################
@@ -44,10 +42,6 @@ class Solver():
     def getOrderList(self) -> list[Order]:
         # Return the districtList
         return self.orderList
-    
-    def getSolutionMatrix(self) -> dict[Drone, list[tuple[Order, int]]]:
-        # Return the solutionMatrix
-        self.solutionMatrix
 
     ################################################################################
     ############################### SOLVER FUNCTIONS ###############################
@@ -59,29 +53,50 @@ class Solver():
     def getNextOrder(self, drone: Drone) -> Order:
         return None
     
-    def generateInitialSolution(self, allowRecharge: bool = True, orderIndex: int = 0) -> ExitCode:
+    def getInitialSolution(self, allowRecharge: bool = True) -> Solution|None:
+        # Create solution with the given parameters from the solver class to hold the final solution
+        solution = Solution(self.droneList, self.depot, self.chargingStationList, self.orderList)
+
+        # Call the internal generateInitialSolution function with the solution and save the error code
+        errorCode = Solver.GenerateInitialSolution(self.droneList, self.orderList, solution, allowRecharge)
+
+        # Check the error code for no success and overwrite the solution
+        if (errorCode != ExitCode.SUCCESS): solution = None
+
+        # Return the solution
+        return solution
+
+    ################################################################################
+    ############################ STATIC SOLVER FUNCTIONS ###########################
+    ################################################################################
+
+    @staticmethod
+    def GenerateInitialSolution(droneList: list[Drone], orderList: list[Order], solution: Solution, allowRecharge: bool = True, orderIndex: int = 0, orderMilageCache: dict[Order, float] = dict()) -> ExitCode:
         # Check if all orders are assigned to a drone
-        if (orderIndex == len(self.orderList)):
+        if (orderIndex == len(orderList)):
             # Return exit code for success
             return ExitCode.SUCCESS
         
         # Define the constraint failure level exit code
         constrainFailureLevel = ExitCode.NO_SOLUTION
 
-        # Resolve the current order from the list
-        currentOrder = self.orderList[orderIndex]
-        
-        # Loop over the list of drones
-        for drone in sorted(self.droneList, key=lambda x: self.solutionMatrix[x][-1][0].getDestination().getDistanceTo(currentOrder.getDestination())):
-            # Resolve the last order and milage of the current drone
-            lastDroneOrder = self.solutionMatrix[drone][-1][0]
-            lastDroneMilage = self.solutionMatrix[drone][-1][1]
+        # Resolve the current order and solution matrix
+        currentOrder = orderList[orderIndex]
+        solutionMatrix = solution.getSolutionMatrix()
+
+        # Loop over the sorted list of drones to check the drones from the closest to farest one
+        for drone in sorted(droneList, key=lambda x: solution.getOrderDistance(solutionMatrix[x][-1], currentOrder)):
+            # Resolve the milage of the current drones last order if available
+            lastDroneMilage = orderMilageCache.get(solutionMatrix[drone][-1], 0)
             
-            # Calculate the distance between the last and current order
-            lastToCurrentOrderDistance = lastDroneOrder.getDestination().getDistanceTo(currentOrder.getDestination())
+            # Resolve the distance between the last and current order from the precalculated solution
+            lastToCurrentOrderDistance = solution.getOrderDistance(solutionMatrix[drone][-1], currentOrder)
+
+            # Calculate the drone milage after the current order for constraint checks
+            currentDroneMilage = lastDroneMilage + lastToCurrentOrderDistance
 
             # Constraint: Remaining range of the drone to reach the desired target
-            if (lastDroneMilage + lastToCurrentOrderDistance) > drone.getRemainingFlightDistance():
+            if (currentDroneMilage > drone.getRemainingFlightDistance()):
                 # Set the constrainFailureLevel exit code
                 constrainFailureLevel = ExitCode.ORDER_NOT_IN_RANGE
                 
@@ -89,74 +104,62 @@ class Solver():
                 continue
 
             # Calculate the remaining range of the drone after the current order 
-            remainingDroneCharge = drone.getRemainingFlightDistance() - (lastDroneMilage + lastToCurrentOrderDistance)
+            remainingDroneCharge = drone.getRemainingFlightDistance() - currentDroneMilage
 
             # Constraint: Check if after the current order enough charge is left to reach a charging stations
-            if not self.isChargingStationInRange(currentOrder.getDestination(), remainingDroneCharge):
+            if not solution.isChargingStationInRange(currentOrder, remainingDroneCharge):
                 # Set the constrainFailureLevel exit code
                 constrainFailureLevel = ExitCode.NO_CHARGING_STATION_IN_RANGE
 
                 # Goto next drone
                 continue
             
-            # Drone has enough capacity so give the order to the current drone
-            self.solutionMatrix[drone].append((currentOrder, lastDroneMilage + lastToCurrentOrderDistance))
+            # Drone has enough capacity add the current order
+            solutionMatrix[drone].append(currentOrder)
+
+            # Update the order milage cache for the current order
+            orderMilageCache[currentOrder] = currentDroneMilage
 
             # Check the recursive alogrithms backtracking response code
-            recursiveResponseCode = self.generateInitialSolution(allowRecharge, orderIndex + 1)
+            recursiveResponseCode = Solver.GenerateInitialSolution(
+                droneList, orderList, solution, allowRecharge, orderIndex + 1, orderMilageCache)
 
             # Check if the order fails because no charging station in range
             if (allowRecharge and (recursiveResponseCode == ExitCode.NO_CHARGING_STATION_IN_RANGE)):
                 # Order the drones to the closest charging station
-                for subDrone in self.droneList:
-                    # Resolve the last order of the current subDrone
-                    lastSubDroneOrder = self.solutionMatrix[subDrone][-1][0]
-
+                for subDrone in droneList:
                     # Get the closest charging station for the subDrone by its last order in the list
-                    targetChargingStation = self.getClosestChargingStation(lastSubDroneOrder.getDestination())
+                    targetChargingStation = solution.getClosestChargingStation(solutionMatrix[subDrone][-1])
+                    
+                    # Create a charging order for the current subdrone
+                    chargingOrder = Order(targetChargingStation, 0, 900)
 
-                    # Add the charging station as next order of the subDrone and reset its available milage
-                    self.solutionMatrix[subDrone].append((Order(targetChargingStation, 0, 900), 0))
+                    # Add the charging station as next order of the subDrone
+                    solutionMatrix[subDrone].append(chargingOrder)
+
+                    # Reset the order milage cache to zero
+                    orderMilageCache[chargingOrder] = 0
                 
                 # Check the recursive alogrithms backtracking response code
-                recursiveResponseCode = self.generateInitialSolution(allowRecharge, orderIndex + 1)
+                recursiveResponseCode = Solver.GenerateInitialSolution(
+                    droneList, orderList, solution, allowRecharge, orderIndex + 1, orderMilageCache)
 
                 # Check if the recursive algorithm was no success
                 if (recursiveResponseCode != ExitCode.SUCCESS):
-                    # Remoe the charging station orders from the drons order list
-                    for subDrone in self.droneList: self.solutionMatrix[subDrone].pop()
+                    # Remove the charging order from all drones
+                    for subDrone in droneList:
+                        # Remove the charging order of the drone (del from both dicts)
+                        removedChargingOrder = solutionMatrix[drone].pop()
+                        del orderMilageCache[removedChargingOrder]
 
             # Check if the recursive algorithm was a success to end it
             if (recursiveResponseCode == ExitCode.SUCCESS):
                 # Return exit code for success
                 return ExitCode.SUCCESS
             
-            # Revert the changes of the current stage
-            self.solutionMatrix[drone].pop()
+            # Revert the changes of the current stage (del from both dicts)
+            removedChargingOrder = solutionMatrix[drone].pop()
+            del orderMilageCache[removedChargingOrder]
 
         # Return the last given constrainFailureLevel exit code
         return constrainFailureLevel
-    
-    def generateInitialSolutions(self, allowRecharge: bool = True, orderIndex: int = 0) -> ExitCode:
-        return 0
-
-    def isChargingStationInRange(self, location: Building | tuple[float, float], range: float) -> bool:
-        # Use the built-in filter function to check if a charging station is in range
-        return next((True for x in self.chargingStationList if x.getDistanceTo(location) <= range), False)
-
-    def getChargingStationsInRange(self, location: Building | tuple[float, float], range: float) -> list[ChargingStation]:
-        # Use the built-in filter function to get all charging stations that are in range
-        return [x for x in self.chargingStationList if x.getDistanceTo(location) <= range]
-
-    def getClosestChargingStation(self, location: Building | tuple[float, float]) -> ChargingStation:
-        # Use the built-in min function to return the closest charging station from the list
-        return min(self.chargingStationList, key=lambda x: x.getDistanceTo(location))
-    
-
-    def getDroneTour(self, drone: Drone, includeChargingOrders: bool = True) -> list[Order]:
-        # Check if the drone tour list should include the charging orders and return the mapped list
-        if includeChargingOrders: return [droneOrder[0] for droneOrder in self.solutionMatrix[drone]]
-
-        # Use the built in filter function to check if the order destination is no charging station
-        return [droneOrder[0] for droneOrder in self.solutionMatrix[drone] 
-                if droneOrder[0].getDestination() not in self.chargingStationList]

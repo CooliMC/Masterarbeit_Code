@@ -8,8 +8,6 @@ from model.Depot import Depot
 from model.Building import Building
 from model.ChargingStation import ChargingStation
 
-from .ExitCode import ExitCode
-
 class Solution():
     # Constructor the order with a given arguemnts
     def __init__(self, droneList: list[Drone], depot: Depot, chargingStationList: list[ChargingStation], orderList: list[Order]):
@@ -64,7 +62,7 @@ class Solution():
     
     def getSolutionMatrix(self) -> dict[Drone, list[Order]]:
         # Return the solutionMatrix
-        self.solutionMatrix
+        return self.solutionMatrix
 
     ################################################################################
     ############################### SCORE FUNCTIONS ################################
@@ -80,10 +78,9 @@ class Solution():
     ################################################################################
 
     def getTwoOptSolutions(self, drone: Drone, maximumLengthDelta: float = 0) -> list[Self]:
-        # Resolve the tour (length) and range of the given drone
+        # Resolve the tour and tour length of the given drone
         orderTour = self.getDroneTour(drone, False)
         tourLength = self.getTourDistance(orderTour)
-        droneRange = drone.getRemainingFlightDistance()
 
         # Create an empty solution list for the two-opt
         twoOptSolutionList = []
@@ -101,15 +98,16 @@ class Solution():
                 # Check if the lengthDelta is smaller then the upper boundary
                 if (lengthDelta <= maximumLengthDelta):
                     # Create the two-opt solution by changing the given paths
-                    twoOptSolutionList.append(self.createTwoOptSolution(
-                        drone, outerTourIndex, innerTourIndex, orderTour))
+                    twoOptSolution = self.createTwoOptSolution(
+                        drone, outerTourIndex, innerTourIndex, orderTour)
                     
                     # Calculate the new tour length with the delta
                     twoOptTourLength = tourLength + lengthDelta
 
-                    
-
-                    # TODO: Calc new length with delta, calc charging stops and add them
+                    # Check and insert charging orders back into the drone tour
+                    if twoOptSolution.insertChargingOrders(drone, None, twoOptTourLength):
+                        # Charging order insertion worked so save the solution
+                        twoOptSolutionList.append(twoOptSolution)
 
         # Return the two-opt solution list
         return twoOptSolutionList
@@ -181,7 +179,7 @@ class Solution():
             secondPathIndex:firstPathIndex:-1] + droneTour[(secondPathIndex + 1):]
 
         # Create a partly deep copy of the solution
-        solutionCopy = self.getSolutionCopy(True)
+        solutionCopy = self.getSolutionCopy()
 
         # Update the orderList of the drone with the droneTour
         solutionCopy.solutionMatrix[drone] = droneTour
@@ -193,6 +191,65 @@ class Solution():
     ############################### SUPPORT FUNCTIONS ##############################
     ################################################################################
 
+    def insertChargingOrders(self, drone: Drone, droneTour: list[Order] = None, droneTourLength: float = None) -> bool:
+        # Check if the droneTour parameter is set or resolve it
+        if droneTour is None: droneTour = self.getDroneTour(drone)
+
+        # Check if the droneTourLength parameter is set or resolve it
+        if droneTourLength is None: droneTourLength = self.getTourDistance(droneTour)
+
+        # Resolve the remaining distance of the drone
+        droneDistance = drone.getRemainingFlightDistance()
+
+        # Not recharge if drone tour shorter then drone range
+        if droneTourLength <= droneDistance: return True
+
+        # Save the insert positions
+        chargeOrderIndexList = []
+
+        # Save the remaining tour range
+        remainingTourRange = droneDistance
+
+        # Loop over the drone tour to insert charging orders
+        for droneTourIndex in range(0, len(droneTour) - 1, 1):
+            # Get the current trip length
+            tripLength = self.getOrderDistance(
+                droneTour[droneTourIndex], 
+                droneTour[droneTourIndex + 1]
+            )
+
+            # Check if the drone has not enought range after the current trip to reach a charging station with the remaning power
+            if not self.isChargingStationInRange(droneTour[droneTourIndex + 1], remainingTourRange - tripLength):
+                
+                # Check if any charging station is in range to split the current trip with a recharge in between the orders
+                if not self.isChargingStationInRange(droneTour[droneTourIndex], remainingTourRange): return False
+
+                # Resolve the closest charging station to the current order
+                nextChargingStation = self.getClosestChargingStation(droneTour[droneTourIndex])
+                
+                # Insert a position of the charging order in the list
+                chargeOrderIndexList.insert(0, (droneTourIndex + 1, Order(nextChargingStation, 0, 900)))
+
+                # Reset the remaining tour range
+                remainingTourRange = droneDistance
+
+                # Recalculate the trip length
+                tripLength = self.getOrderBuildingDistance(
+                    droneTour[droneTourIndex + 1],
+                    nextChargingStation
+                )
+
+            # Remove the trip length from the remaining tour range
+            remainingTourRange -= tripLength
+
+        # Loop through the charge order index list to insert them
+        for chargeOrderTuple in chargeOrderIndexList:
+            # Inset the charge order at the given index (back to front)
+            droneTour.insert(chargeOrderTuple[0], chargeOrderTuple[1])
+
+        # Charge order insert worked
+        return True
+
     def getSolutionCopy(self) -> Self:
         # Use the built-in function to copy the solution
         solutionCopy = copy(self)
@@ -201,16 +258,24 @@ class Solution():
         solutionCopy.solutionMatrix = dict(solutionCopy.solutionMatrix)
 
         # Loop over the shallow copy of the solution matrix
-        for drone, orderList in solutionCopy.solutionMatrix:
+        for drone, orderList in solutionCopy.solutionMatrix.items():
             # Create a shallow copy of the orderList with the list function
             solutionCopy.solutionMatrix[drone] = list(orderList)
 
         # Return the solution copy
         return solutionCopy
 
+    def getBuildingDistance(self, sourceBuilding: Building, destinationBuilding: Building) -> float:
+        # Use the precalculated distanceMatrix to get the distance between the buildings
+        return self.distanceMatrix[sourceBuilding][destinationBuilding]
+
     def getOrderDistance(self, sourceOrder: Order, destinationOrder: Order) -> float:
         # Use the precalculated distanceMatrix to get the distance between the orders
         return self.distanceMatrix[sourceOrder.getDestination()][destinationOrder.getDestination()]
+
+    def getOrderBuildingDistance(self, sourceOrder: Order, destinationBuilding: Building) -> float:
+        # Use the precalculated distanceMatrix to get the distance between the order and building
+        return self.distanceMatrix[sourceOrder.getDestination()][destinationBuilding]
 
     def getDroneByOrder(self, order: Order) -> Drone:
         # Use the built-in function to get the drone that has the given order in its orderList
@@ -239,7 +304,26 @@ class Solution():
 
         # Return the summed up destinations
         return tourDistance
+    
 
+    # TODO: Idea - Cache the closest charging station to each order for O(1) instead of O(n) lookup
+    
+    ################################################################################
+    ####################### CHARGING STATION SUPPORT FUNCTIONS #####################
+    ################################################################################
+
+    def isChargingStationInRange(self, order: Order, range: float) -> bool:
+        # Use the built-in filter function to check if a charging station is in range of the current order
+        return next((True for x in self.chargingStationList if self.getOrderBuildingDistance(order, x) <= range), False)
+    
+    def getChargingStationsInRange(self, order: Order, range: float) -> list[ChargingStation]:
+        # Use the built-in filter function to get all charging stations that are in range
+        return [x for x in self.chargingStationList if self.getOrderBuildingDistance(order, x) <= range]
+    
+    def getClosestChargingStation(self, order: Order) -> ChargingStation:
+        # Use the built-in min function to return the closest charging station from the list
+        return min(self.chargingStationList, key=lambda x: self.getOrderBuildingDistance(order, x))
+        
     ################################################################################
     ############################### SUPPORT FUNCTIONS ##############################
     ################################################################################

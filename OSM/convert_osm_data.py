@@ -73,31 +73,40 @@ def main():
     simulation = Simulation(districtList, droneList, depot, 15)
     
     # Create random orders for buildings in the district
-    orderList = list(map(lambda x: Order(x), simulation.pickRandomBuildings(350)))
+    orderList = list(map(lambda x: Order(x), simulation.pickRandomBuildings(150))) # 350 is good medium
 
     solver = Solver(droneList, depot, simulation.getChargingStationList(), orderList)
 
-    # Temp Checks
-    start = time.time()
-    t1 = Solution.CalculateDistanceMatrix([depot] + simulation.getChargingStationList() + [order.getDestination() for order in orderList])
-    end = time.time()
-    print(f'Calculate the distance matrix in {(end - start) * 1000} ms')
-
-    d1 = depot
-    d2 = depot
-    print(f'Distance from {d1} to {d2} is {t1[d1][d2]} m')
-    return 0
-
-    t = solver.generateInitialSolution()
+    
+    initalSol = solver.getInitialSolution()
+    twoOptSol = initalSol
 
     # Solution output
-    print(f'InitialSolution ResponseCode={t}')
     print(f'InitialSolution:')
-    for drone, orders in solver.solutionMatrix.items():
+    for drone, orders in initalSol.getSolutionMatrix().items():
         print(f'-> Drone (milageAvailable={drone.getRemainingFlightDistance()})')
         for order in orders:
-            print(f'---> Order (destination={order[0].getDestination()}, currentMilage={order[1]})')
+            print(f'---> Order (destination={order.getDestination()})')
     
+
+    for drone in twoOptSol.getDroneList():
+        print(f'Initial Drone[0] tour distance: of {twoOptSol.getDroneTourDistance(drone)} m')
+
+        start = time.time()
+        iterations = 0
+        while True:
+            iterations += 1
+            betterSolution = min(twoOptSol.getTwoOptSolutions(drone), key = lambda x: x.getDroneTourDistance(drone), default = twoOptSol)
+            if betterSolution.getDroneTourDistance(drone) >= twoOptSol.getDroneTourDistance(drone): break
+            twoOptSol = betterSolution
+        end = time.time()
+
+        print(f'Calcualte the TwoOptSolutions in {(end - start) * 1000} ms with {iterations} iterations and tour distance of {twoOptSol.getDroneTourDistance(drone)} m')
+
+    
+    print(f'Checking distance for drone tour with current length of {twoOptSol.getDroneTourDistance(droneList[0])} m')
+    for twoOpt in twoOptSol.getTwoOptSolutions(droneList[0]):
+        print(f'Found following twoOpt solutions with distance of {twoOpt.getDroneTourDistance(droneList[0])} m')
 
     # GeoJSON Visualisation
     depotFeature = Feature(geometry=Point(depot.getCoordinates()[::-1]), properties={ 
@@ -122,15 +131,26 @@ def main():
     }), orderList))
 
     colorList = [ 'red', 'green', 'blue', 'orange', 'black' ]
+    
+    # Print Initial Solution
     droneFlightFeatureList = []
 
-    for drone, orders in solver.solutionMatrix.items():
-        droneFlightFeatureList.append(Feature(geometry=LineString(list(map(lambda x: x[0].getDestination().getCoordinates()[::-1], orders))), properties={ 'stroke': colorList[droneList.index(drone)], 'stroke-width': '3', 'stroke-opacity': 1 }))
+    for drone, orders in initalSol.getSolutionMatrix().items():
+        droneFlightFeatureList.append(Feature(geometry=LineString(list(map(lambda x: x.getDestination().getCoordinates()[::-1], orders))), properties={ 'stroke': colorList[droneList.index(drone)], 'stroke-width': '3', 'stroke-opacity': 1 }))
 
     featureCollection = FeatureCollection([depotFeature] + chargingStationFeatureList + orderFeatureList + droneFlightFeatureList)
 
     print(featureCollection)
 
+    # Print 2Opt Solution
+    droneFlightFeatureList = []
+
+    for drone, orders in twoOptSol.getSolutionMatrix().items():
+        droneFlightFeatureList.append(Feature(geometry=LineString(list(map(lambda x: x.getDestination().getCoordinates()[::-1], orders))), properties={ 'stroke': colorList[droneList.index(drone)], 'stroke-width': '3', 'stroke-opacity': 1 }))
+
+    featureCollection = FeatureCollection([depotFeature] + chargingStationFeatureList + orderFeatureList + droneFlightFeatureList)
+
+    print(featureCollection)
 
     return 0
 
