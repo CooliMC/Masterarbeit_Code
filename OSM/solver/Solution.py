@@ -96,7 +96,7 @@ class Solution():
                 )
 
                 # Check if the lengthDelta is smaller then the upper boundary
-                if (lengthDelta <= maximumLengthDelta):
+                if (lengthDelta < maximumLengthDelta):
                     # Create the two-opt solution by changing the given paths
                     twoOptSolution = self.createTwoOptSolution(
                         drone, outerTourIndex, innerTourIndex, orderTour)
@@ -106,8 +106,13 @@ class Solution():
 
                     # Check and insert charging orders back into the drone tour
                     if twoOptSolution.insertChargingOrders(drone, None, twoOptTourLength):
-                        # Charging order insertion worked so save the solution
-                        twoOptSolutionList.append(twoOptSolution)
+                        # Get the length of the extended tour and recalculate the length delta
+                        lengthDelta = twoOptSolution.getDroneTourDistance(drone, True) - self.getDroneTourDistance(drone, True)
+
+                        # Check if the lengthDelta is still smaller then the upper boundary
+                        if (lengthDelta < maximumLengthDelta):
+                            # Charging order insertion worked so save the solution
+                            twoOptSolutionList.append(twoOptSolution)
 
         # Return the two-opt solution list
         return twoOptSolutionList

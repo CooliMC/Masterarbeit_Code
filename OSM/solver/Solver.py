@@ -72,17 +72,53 @@ class Solver():
 
     @staticmethod
     def GenerateInitialSolution(droneList: list[Drone], orderList: list[Order], solution: Solution, allowRecharge: bool = True, orderIndex: int = 0, orderMilageCache: dict[Order, float] = dict()) -> ExitCode:
+         #Resolve the solution matrix for easier access
+        solutionMatrix = solution.getSolutionMatrix()
+        
         # Check if all orders are assigned to a drone
         if (orderIndex == len(orderList)):
+            # Try to close the route by inserting the return-to-start (depot) order
+            for drone in droneList:
+                # Close the route by inserting the return-to-start (depot) order
+                currentOrder = Order(solutionMatrix[drone][0].getDestination(), 0, 0)
+
+                # Resolve the milage of the current drones last order if available
+                lastDroneMilage = orderMilageCache.get(solutionMatrix[drone][-1], 0)
+                
+                # Resolve the distance between the last and current order from the precalculated solution
+                lastToCurrentOrderDistance = solution.getOrderDistance(solutionMatrix[drone][-1], currentOrder)
+
+                # Calculate the drone milage after the current order for constraint checks
+                currentDroneMilage = lastDroneMilage + lastToCurrentOrderDistance
+
+                # Constraint: Remaining range of the drone to reach the desired target
+                if (currentDroneMilage > drone.getRemainingFlightDistance()):
+                    # Get the closest charging station for the drone by its last order in the list
+                    targetChargingStation = solution.getClosestChargingStation(solutionMatrix[drone][-1])
+                    
+                    # Create a charging order for the current drone
+                    chargingOrder = Order(targetChargingStation, 0, 900)
+
+                    # Add the charging station as next order of the drone
+                    solutionMatrix[drone].append(chargingOrder)
+
+                    # Reset the order milage cache to zero
+                    orderMilageCache[chargingOrder] = 0
+
+                # Drone has enough capacity add the current order
+                solutionMatrix[drone].append(currentOrder)
+
+                # Update the order milage cache for the current order
+                orderMilageCache[currentOrder] = currentDroneMilage
+
             # Return exit code for success
             return ExitCode.SUCCESS
         
         # Define the constraint failure level exit code
         constrainFailureLevel = ExitCode.NO_SOLUTION
 
-        # Resolve the current order and solution matrix
+        # Resolve the current order by the index
         currentOrder = orderList[orderIndex]
-        solutionMatrix = solution.getSolutionMatrix()
 
         # Loop over the sorted list of drones to check the drones from the closest to farest one
         for drone in sorted(droneList, key=lambda x: solution.getOrderDistance(solutionMatrix[x][-1], currentOrder)):
@@ -104,10 +140,10 @@ class Solver():
                 continue
 
             # Calculate the remaining range of the drone after the current order 
-            remainingDroneCharge = drone.getRemainingFlightDistance() - currentDroneMilage
+            remainingDroneRange = drone.getRemainingFlightDistance() - currentDroneMilage
 
             # Constraint: Check if after the current order enough charge is left to reach a charging stations
-            if not solution.isChargingStationInRange(currentOrder, remainingDroneCharge):
+            if not solution.isChargingStationInRange(currentOrder, remainingDroneRange):
                 # Set the constrainFailureLevel exit code
                 constrainFailureLevel = ExitCode.NO_CHARGING_STATION_IN_RANGE
 

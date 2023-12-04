@@ -73,7 +73,8 @@ def main():
     simulation = Simulation(districtList, droneList, depot, 15)
     
     # Create random orders for buildings in the district
-    orderList = list(map(lambda x: Order(x), simulation.pickRandomBuildings(150))) # 350 is good medium
+    #orderList = list(map(lambda x: Order(x), simulation.pickRandomBuildings(150))) # 350 is good medium
+    orderList = list(map(lambda x: Order(x), simulation.getBuildingList()[0::299]))
 
     solver = Solver(droneList, depot, simulation.getChargingStationList(), orderList)
 
@@ -104,9 +105,9 @@ def main():
         print(f'Calcualte the TwoOptSolutions in {(end - start) * 1000} ms with {iterations} iterations and tour distance of {twoOptSol.getDroneTourDistance(drone)} m')
 
     
-    print(f'Checking distance for drone tour with current length of {twoOptSol.getDroneTourDistance(droneList[0])} m')
-    for twoOpt in twoOptSol.getTwoOptSolutions(droneList[0]):
-        print(f'Found following twoOpt solutions with distance of {twoOpt.getDroneTourDistance(droneList[0])} m')
+    print(f'Checking distance for drone tour with current length of {twoOptSol.getDroneTourDistance(droneList[1])} m')
+    for twoOpt in twoOptSol.getTwoOptSolutions(droneList[1]):
+        print(f'Found following twoOpt solutions with distance of {twoOpt.getDroneTourDistance(droneList[1])} m')
 
     # GeoJSON Visualisation
     depotFeature = Feature(geometry=Point(depot.getCoordinates()[::-1]), properties={ 
@@ -136,7 +137,8 @@ def main():
     droneFlightFeatureList = []
 
     for drone, orders in initalSol.getSolutionMatrix().items():
-        droneFlightFeatureList.append(Feature(geometry=LineString(list(map(lambda x: x.getDestination().getCoordinates()[::-1], orders))), properties={ 'stroke': colorList[droneList.index(drone)], 'stroke-width': '3', 'stroke-opacity': 1 }))
+        if drone == droneList[1]:
+            droneFlightFeatureList.append(Feature(geometry=LineString(list(map(lambda x: x.getDestination().getCoordinates()[::-1], orders))), properties={ 'stroke': colorList[droneList.index(drone)], 'stroke-width': '3', 'stroke-opacity': 1 }))
 
     featureCollection = FeatureCollection([depotFeature] + chargingStationFeatureList + orderFeatureList + droneFlightFeatureList)
 
@@ -146,7 +148,8 @@ def main():
     droneFlightFeatureList = []
 
     for drone, orders in twoOptSol.getSolutionMatrix().items():
-        droneFlightFeatureList.append(Feature(geometry=LineString(list(map(lambda x: x.getDestination().getCoordinates()[::-1], orders))), properties={ 'stroke': colorList[droneList.index(drone)], 'stroke-width': '3', 'stroke-opacity': 1 }))
+        if drone == droneList[1]:
+            droneFlightFeatureList.append(Feature(geometry=LineString(list(map(lambda x: x.getDestination().getCoordinates()[::-1], orders))), properties={ 'stroke': colorList[droneList.index(drone)], 'stroke-width': '3', 'stroke-opacity': 1 }))
 
     featureCollection = FeatureCollection([depotFeature] + chargingStationFeatureList + orderFeatureList + droneFlightFeatureList)
 

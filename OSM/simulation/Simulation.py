@@ -129,7 +129,7 @@ class Simulation():
 
         # Create kMeans model with some adjusted parameters
         kmeans = KMeans(init="k-means++", n_clusters=stationCount,
-            n_init=10, max_iter=500, random_state=None)
+            n_init=10, max_iter=500, random_state=1) #None) REMOVE THIS HERE REMOVE THIS HERE REMOVE THIS HERE REMOVE THIS HERE REMOVE THIS HERE REMOVE THIS HERE
 
         # Fit the building coordinate list into the model
         kmeans.fit(buildingCoordinateList)
