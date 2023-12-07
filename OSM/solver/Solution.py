@@ -77,7 +77,7 @@ class Solution():
     ############################ NEIGHBORHOOD FUNCTIONS ############################
     ################################################################################
 
-    def getTwoOptSolutions(self, drone: Drone, maximumLengthDelta: float = 0, insertChargingOrders: bool = True) -> list[Self]:
+    def getTwoOptSolutions(self, drone: Drone, maximumLengthDelta: float = 0, insertChargingOrders: bool = False) -> list[Self]:
         # Resolve the tour and tour length with and without recharges
         tourOrders = self.getDroneTour(drone, False)
         tourLength = self.getTourDistance(tourOrders)
@@ -103,7 +103,7 @@ class Solution():
                 twoOptSolution = self.createTwoOptSolution(
                     drone, outerTourIndex, innerTourIndex, tourOrders)
                 
-                # Check if the new solution should have charging orders
+                # Check if the new solution should have reinserted charging orders
                 if insertChargingOrders:
                     # Calculate the new tour length with the delta
                     twoOptTourLength = tourLength + lengthDelta
