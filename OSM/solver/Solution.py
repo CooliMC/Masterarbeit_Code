@@ -77,23 +77,23 @@ class Solution():
     ############################ NEIGHBORHOOD FUNCTIONS ############################
     ################################################################################
 
-    def getTwoOptSolutions(self, drone: Drone, maximumLengthDelta: float = 0) -> list[Self]:
+    def getTwoOptSolutions(self, drone: Drone, maximumLengthDelta: float = 0, insertChargingOrders: bool = True) -> list[Self]:
         # Resolve the tour and tour length with and without recharges
-        orderTour = self.getDroneTour(drone, False)
-        tourLength = self.getTourDistance(orderTour)
+        tourOrders = self.getDroneTour(drone, False)
+        tourLength = self.getTourDistance(tourOrders)
         tourDistance = self.getDroneTourDistance(drone, True)
 
         # Create an empty solution list for the two-opt
         twoOptSolutionList = []
 
         # Loop over the tour of the drone for potential edges
-        for outerTourIndex in range(0, len(orderTour) - 2, 1):
+        for outerTourIndex in range(0, len(tourOrders) - 3, 1):
             # Loop over the rest of the tours after this to check for potential swaps
-            for innerTourIndex in range(outerTourIndex + 1, len(orderTour) -1, 1):
+            for innerTourIndex in range(outerTourIndex + 2, len(tourOrders) - 1, 1):
                 # Use a dedicated function to calculate the path delta for the two-opt
                 lengthDelta = self.calculateTwoOptPathLengthDelta(
-                    (orderTour[outerTourIndex], orderTour[outerTourIndex + 1]), 
-                    (orderTour[innerTourIndex], orderTour[innerTourIndex + 1])
+                    (tourOrders[outerTourIndex], tourOrders[outerTourIndex + 1]), 
+                    (tourOrders[innerTourIndex], tourOrders[innerTourIndex + 1])
                 )
 
                 # Check the lengthDelta against the upper boundary
@@ -101,19 +101,21 @@ class Solution():
 
                 # Create the two-opt solution by changing the given paths
                 twoOptSolution = self.createTwoOptSolution(
-                    drone, outerTourIndex, innerTourIndex, orderTour)
-                    
-                # Calculate the new tour length with the delta
-                twoOptTourLength = tourLength + lengthDelta
+                    drone, outerTourIndex, innerTourIndex, tourOrders)
+                
+                # Check if the new solution should have charging orders
+                if insertChargingOrders:
+                    # Calculate the new tour length with the delta
+                    twoOptTourLength = tourLength + lengthDelta
 
-                # Check and insert charging orders back into the drone tour, if not possible continue
-                if not twoOptSolution.insertChargingOrders(drone, None, twoOptTourLength): continue
+                    # Check and insert charging orders back into the drone tour, if not possible continue
+                    if not twoOptSolution.insertChargingOrders(drone, None, twoOptTourLength): continue
 
-                # Get the length of the extended tour and recalculate the length delta
-                lengthDelta = twoOptSolution.getDroneTourDistance(drone, True) - tourDistance
+                    # Get the length of the extended tour and recalculate the length delta
+                    lengthDelta = twoOptSolution.getDroneTourDistance(drone, True) - tourDistance
 
-                # Check the recalculated lengthDelta against the upper boundary
-                if (lengthDelta >= maximumLengthDelta): continue
+                    # Check the recalculated lengthDelta against the upper boundary
+                    if (lengthDelta >= maximumLengthDelta): continue
 
                 # Charging order insertion worked so save the solution
                 twoOptSolutionList.append(twoOptSolution)
@@ -172,12 +174,15 @@ class Solution():
 
     def calculateTwoOptPathLengthDelta(self, firstPath: tuple[Order, Order], secondPath: tuple[Order, Order]) -> float:
         # Use the precalculation to get the path delta for two-opt swap
-        return (
+        lengthDelta = (
             self.getOrderDistance(firstPath[0], secondPath[0])
             + self.getOrderDistance(firstPath[1], secondPath[1])
             - self.getOrderDistance(firstPath[0], firstPath[1])
             - self.getOrderDistance(secondPath[0], secondPath[1])
         )
+    
+        # Return the rounded result
+        return round(lengthDelta, 2)
     
     def createTwoOptSolution(self, drone: Drone, firstPathIndex: int, secondPathIndex: int, droneTour: list[Order] = None) -> Self:
         # Check if the droneTour parameter is set or resolve it

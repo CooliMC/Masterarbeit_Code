@@ -97,17 +97,13 @@ def main():
         iterations = 0
         while True:
             iterations += 1
-            betterSolution = min(twoOptSol.getTwoOptSolutions(drone), key = lambda x: x.getDroneTourDistance(drone), default = twoOptSol)
+            betterSolution = min(twoOptSol.getTwoOptSolutions(drone, 0, False), key = lambda x: x.getDroneTourDistance(drone), default = twoOptSol)
             if betterSolution.getDroneTourDistance(drone) >= twoOptSol.getDroneTourDistance(drone): break
             twoOptSol = betterSolution
+        if not twoOptSol.insertChargingOrders(drone): print(f'Corrupt Solution found ...')
         end = time.time()
 
         print(f'Calcualte the TwoOptSolutions in {(end - start) * 1000} ms with {iterations} iterations and tour distance of {twoOptSol.getDroneTourDistance(drone)} m')
-
-    
-    print(f'Checking distance for drone tour with current length of {twoOptSol.getDroneTourDistance(droneList[0])} m')
-    for twoOpt in twoOptSol.getTwoOptSolutions(droneList[0]):
-        print(f'Found following twoOpt solutions with distance of {twoOpt.getDroneTourDistance(droneList[0])} m')
 
     # GeoJSON Visualisation
     depotFeature = Feature(geometry=Point(depot.getCoordinates()[::-1]), properties={ 
