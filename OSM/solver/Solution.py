@@ -9,6 +9,10 @@ from model.Building import Building
 from model.ChargingStation import ChargingStation
 
 class Solution():
+    # Define constants for the solution class
+    FLOAT_POSITIVE_INFINITY = float('+inf')
+    FLOAT_NEGATIVE_INFINITY = float('-inf')
+
     # Constructor the order with a given arguemnts
     def __init__(self, droneList: list[Drone], depot: Depot, chargingStationList: list[ChargingStation], orderList: list[Order]):
         # Save the list of drones
@@ -108,7 +112,7 @@ class Solution():
                     # Calculate the new tour length with the delta
                     twoOptTourLength = tourLength + lengthDelta
 
-                    # Check and insert charging orders back into the drone tour, if not possible continue
+                    # Insert charging orders back into the drone tour, if not possible continue
                     if not twoOptSolution.insertChargingOrders(drone, None, twoOptTourLength): continue
 
                     # Get the length of the extended tour and recalculate the length delta
@@ -117,32 +121,70 @@ class Solution():
                     # Check the recalculated lengthDelta against the upper boundary
                     if (lengthDelta >= maximumLengthDelta): continue
 
-                # Charging order insertion worked so save the solution
+                # All checks done so save the solution
                 twoOptSolutionList.append(twoOptSolution)
 
         # Return the two-opt solution list
         return twoOptSolutionList
 
-    def getRelocateSolutions(self, order: Order) -> list[Self]:
-        # Resolve the drone of the given order
-        orderDrone = self.getDroneByOrder(order)
+    def getRelocateSolutions(self, relocateOrder: Order, maximumLengthDelta: float = FLOAT_POSITIVE_INFINITY, insertChargingOrders: bool = False) -> list[Self]:
+        # Resolve the drone, tour, index and tour distance of the relocate order
+        relocateOrderDrone = self.getDroneByOrder(relocateOrder)
+        relocateTourOrders = self.getDroneTour(relocateOrderDrone, False)
+        relocateOrderIndex = relocateTourOrders.index(relocateOrder)
+        relocateTourDistance = self.getDroneTourDistance(relocateOrderDrone, True)
 
         # Create an empty solution list for the relocates
         relocateSolutionList = []
 
+        # Check if the relocate order is shiftable (not first order)
+        if (relocateOrderIndex == 0): return relocateSolutionList
+
+        # Check if the relocate order is shiftable (not last order)
+        if (relocateOrderIndex == (len(relocateTourOrders) - 1)): return relocateSolutionList
+
         # Loop through the list of drones
         for partnerDrone in self.droneList:
-            # Check if the relocate partner is the same drone and continue
-            if (partnerDrone == orderDrone): continue
+            # Check if the relocate partner is the same drone
+            if (partnerDrone == relocateOrderDrone): continue
 
-            # Resolve the tour of the partner drone without recharges
-            partnerTour = self.getDroneTour(partnerDrone, False)
+            # Resolve the tour and tour length with recharges
+            partnerTourOrders = self.getDroneTour(partnerDrone, False)
+            partnerTourDistance = self.getDroneTourDistance(partnerDrone, True)
 
             # Loop over the tour of the partner drone for relocates
-            for partnerTourIndex in range(0, len(partnerTour) -1, 1):
-                1
+            for partnerTourIndex in range(0, len(partnerTourOrders) -1, 1):
+                # Use a dedicated function to calculate the path delta for the relocate shift
+                lengthDelta = self.calculateRelocatePathLengthDelta(
+                    (relocateTourOrders[relocateOrderIndex - 1], relocateTourOrders[relocateOrderIndex], relocateTourOrders[relocateOrderIndex + 1]), 
+                    (partnerTourOrders[partnerTourIndex], partnerTourOrders[partnerTourIndex + 1])
+                )
 
-            # TODO: Implement the shift
+                # Check the lengthDelta against the upper boundary
+                if (lengthDelta >= maximumLengthDelta): continue
+
+                # Create the relocate solution by changing the given paths
+                relocateSolution = self.createRelocateSolution(
+                    relocateOrderDrone, partnerDrone, relocateOrder, partnerTourIndex + 1)
+                
+                # Check if the new solution should have reinserted charging orders
+                if insertChargingOrders:
+                    # Insert charging orders back into the drone tours, if not possible continue
+                    if not relocateSolution.insertChargingOrders(relocateOrderDrone): continue
+                    if not relocateSolution.insertChargingOrders(partnerDrone): continue
+
+                    # Resolve the updated tour distance of the reloacate order and partner tour
+                    updatedRelocateTourDistance = relocateSolution.getDroneTourDistance(relocateOrderDrone, True)
+                    updatedPartnerTourDistance = relocateSolution.getDroneTourDistance(partnerDrone, True)
+
+                    # Get the length of the extended tours and recalculate the length delta with the length of the pre relocate tours
+                    lengthDelta = (updatedRelocateTourDistance + updatedPartnerTourDistance - relocateTourDistance - partnerTourDistance)
+
+                    # Check the recalculated lengthDelta against the upper boundary
+                    if (lengthDelta >= maximumLengthDelta): continue
+
+                # All checks done so save the solution
+                relocateSolutionList.append(relocateSolution)
 
         # Return the relocateSolutionList
         return relocateSolutionList
@@ -200,6 +242,37 @@ class Solution():
 
         # Return the modified solution copy
         return solutionCopy
+    
+    ################################################################################
+    ############################### Relocate FUNCTIONS #############################
+    ################################################################################
+
+    def calculateRelocatePathLengthDelta(self, firstPath: tuple[Order, Order, Order], secondPath: tuple[Order, Order]) -> float:
+        # Use the precalculation to get the path delta for relocate shift
+        lengthDelta = (
+            self.getOrderDistance(secondPath[0], firstPath[1])
+            + self.getOrderDistance(firstPath[1], secondPath[1])
+            + self.getOrderDistance(firstPath[0], firstPath[2])
+            - self.getOrderDistance(firstPath[0], firstPath[1])
+            - self.getOrderDistance(firstPath[1], firstPath[2])
+            - self.getOrderDistance(secondPath[0], secondPath[1])
+        )
+    
+        # Return the rounded result
+        return round(lengthDelta, 2)
+
+    def createRelocateSolution(self, sourceDrone: Drone, destinationDrone: Drone, relocateOrder: Order, destinationTourIndex: int) -> Self:
+        # Create a partly deep copy of the solution
+        solutionCopy = self.getSolutionCopy()
+
+        # Remove the relocate order from the source drone tour
+        solutionCopy.solutionMatrix[sourceDrone].remove(relocateOrder)
+
+        # Add the relocate order to the destination drone tour at the given destination tour index
+        solutionCopy.solutionMatrix[destinationDrone].insert(destinationTourIndex, relocateOrder)
+
+        # Return the modified solution copy
+        return solutionCopy
 
     ################################################################################
     ############################### SUPPORT FUNCTIONS ##############################
@@ -207,7 +280,7 @@ class Solution():
 
     def insertChargingOrders(self, drone: Drone, droneTour: list[Order] = None, droneTourLength: float = None) -> bool:
         # Check if the droneTour parameter is set or resolve it
-        if droneTour is None: droneTour = self.getDroneTour(drone)
+        if droneTour is None: droneTour = self.getDroneTour(drone, False)
 
         # Check if the droneTourLength parameter is set or resolve it
         if droneTourLength is None: droneTourLength = self.getTourDistance(droneTour)
@@ -260,6 +333,9 @@ class Solution():
         for chargeOrderTuple in chargeOrderIndexList:
             # Inset the charge order at the given index (back to front)
             droneTour.insert(chargeOrderTuple[0], chargeOrderTuple[1])
+
+        # Replace the drone tour in the solution matrix
+        self.solutionMatrix[drone] = droneTour
 
         # Charge order insert worked
         return True

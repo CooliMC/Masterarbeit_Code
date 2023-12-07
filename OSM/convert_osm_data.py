@@ -85,25 +85,62 @@ def main():
     # Solution output
     print(f'InitialSolution:')
     for drone, orders in initalSol.getSolutionMatrix().items():
-        print(f'-> Drone (milageAvailable={drone.getRemainingFlightDistance()})')
+        print(f'-> Drone (milageAvailable={drone.getRemainingFlightDistance()}, tourDistance={initalSol.getDroneTourDistance(drone)})')
         for order in orders:
             print(f'---> Order (destination={order.getDestination()})')
     
+    print(f'---------------------------------------------------------------------------------------------------------------')
 
     for drone in twoOptSol.getDroneList():
-        print(f'Initial Drone[0] tour distance: of {twoOptSol.getDroneTourDistance(drone)} m')
+        print(f'Initial Drone tour distance: of {twoOptSol.getDroneTourDistance(drone)} m')
 
         start = time.time()
         iterations = 0
         while True:
             iterations += 1
-            betterSolution = min(twoOptSol.getTwoOptSolutions(drone, 0, False), key = lambda x: x.getDroneTourDistance(drone), default = twoOptSol)
+            betterSolution = min(twoOptSol.getTwoOptSolutions(drone), key = lambda x: x.getDroneTourDistance(drone), default = twoOptSol)
             if betterSolution.getDroneTourDistance(drone) >= twoOptSol.getDroneTourDistance(drone): break
             twoOptSol = betterSolution
         if not twoOptSol.insertChargingOrders(drone): print(f'Corrupt Solution found ...')
         end = time.time()
 
         print(f'Calcualte the TwoOptSolutions in {(end - start) * 1000} ms with {iterations} iterations and tour distance of {twoOptSol.getDroneTourDistance(drone)} m')
+
+
+    print(f'---------------------------------------------------------------------------------------------------------------')
+    relocateSol = twoOptSol
+
+    beforeRelocateSum = sum(relocateSol.getDroneTourDistance(drone) for drone in relocateSol.getDroneList())
+    print(f'Pre Relocate tour sum distance of {beforeRelocateSum} m')
+
+    start = time.time()
+    iterations = 0
+
+    for order in relocateSol.getOrderList():
+        print(f'Calculating RelocateSolutions for Order {order}')
+        while True:
+            iterations += 1
+            betterSolution = min(relocateSol.getRelocateSolutions(order, 0), key = lambda x: sum(x.getDroneTourDistance(y) for y in x.getDroneList()), default = relocateSol)
+            if sum(betterSolution.getDroneTourDistance(y) for y in betterSolution.getDroneList()) >= sum(relocateSol.getDroneTourDistance(y) for y in relocateSol.getDroneList()): break
+            relocateSol = betterSolution
+
+    for drone in relocateSol.getDroneList():
+        print(f'Insert Charging order into RelocateSolution fro drone {drone}')
+        if not relocateSol.insertChargingOrders(drone): print(f'Corrupt Solution found ...')
+    
+    end = time.time()
+
+    afterRelocateSum = sum(relocateSol.getDroneTourDistance(drone) for drone in relocateSol.getDroneList())
+    print(f'Calcualte the RelocateSolutions in {(end - start) * 1000} ms with {iterations} iterations and tour sum distance from {beforeRelocateSum} m to {afterRelocateSum} m (Delta: {afterRelocateSum - beforeRelocateSum} m)')
+
+    print(f'---------------------------------------------------------------------------------------------------------------')
+
+    for drone, orders in relocateSol.getSolutionMatrix().items():
+        print(f'-> Drone (milageAvailable={drone.getRemainingFlightDistance()}, tourDistance={relocateSol.getDroneTourDistance(drone)})')
+        for order in orders:
+            print(f'---> Order (destination={order.getDestination()})')
+
+    print(f'---------------------------------------------------------------------------------------------------------------')
 
     # GeoJSON Visualisation
     depotFeature = Feature(geometry=Point(depot.getCoordinates()[::-1]), properties={ 
@@ -143,6 +180,16 @@ def main():
     droneFlightFeatureList = []
 
     for drone, orders in twoOptSol.getSolutionMatrix().items():
+        droneFlightFeatureList.append(Feature(geometry=LineString(list(map(lambda x: x.getDestination().getCoordinates()[::-1], orders))), properties={ 'stroke': colorList[droneList.index(drone)], 'stroke-width': '3', 'stroke-opacity': 1 }))
+
+    featureCollection = FeatureCollection([depotFeature] + chargingStationFeatureList + orderFeatureList + droneFlightFeatureList)
+
+    print(featureCollection)
+
+    # Print Relocate Solution
+    droneFlightFeatureList = []
+
+    for drone, orders in relocateSol.getSolutionMatrix().items():
         droneFlightFeatureList.append(Feature(geometry=LineString(list(map(lambda x: x.getDestination().getCoordinates()[::-1], orders))), properties={ 'stroke': colorList[droneList.index(drone)], 'stroke-width': '3', 'stroke-opacity': 1 }))
 
     featureCollection = FeatureCollection([depotFeature] + chargingStationFeatureList + orderFeatureList + droneFlightFeatureList)
