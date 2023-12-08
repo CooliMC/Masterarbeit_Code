@@ -13,6 +13,10 @@ from solver.Solution import Solution
 
 from geojson import FeatureCollection, Feature, Point, LineString
 
+import plotly.express as px
+import plotly.graph_objects as go
+
+
 def readJsonFile(path: str = ''):
     # Open the JSON-File in Read-Only Mode
     with open(path, 'r') as json_file:
@@ -195,6 +199,111 @@ def main():
     featureCollection = FeatureCollection([depotFeature] + chargingStationFeatureList + orderFeatureList + droneFlightFeatureList)
 
     print(featureCollection)
+
+
+    # Plot the feature collection on the map
+    fig = go.Figure(
+        go.Scattermapbox(),
+        layout = {
+            'mapbox': {
+                'style': "stamen-terrain",
+                'zoom': 10
+            },
+            'margin': {'l':0, 'r':0, 'b':0, 't':0},
+            'mapbox_style': 'open-street-map',
+        }
+    )
+
+    # Add the drone tours
+    fig.update_mapboxes(layers=[
+        {
+            'source': feature,
+            "sourcetype": "geojson",
+            'type': "line", 
+            'line': {
+                'width': 3,
+            },
+            'below': "traces", 
+            'color': feature.properties.get('stroke', 'royalblue'),
+        } for feature in FeatureCollection(droneFlightFeatureList).features])
+    
+    # Add the depot marker
+    fig.add_trace(
+        go.Scattermapbox(
+            mode='markers+text',
+            lat=[depot.getCoordinates()[0]],
+            lon=[depot.getCoordinates()[1]],
+            marker={
+                'symbol': 'circle',
+                'size': 20,
+                'color': 'purple',
+                'allowoverlap': True
+            },
+            text = ["Depot"],
+            textposition = "bottom right",
+            showlegend=False
+        )
+    )
+
+    # Add the charging station markers
+    fig.add_trace(
+        go.Scattermapbox(
+            mode='markers+text',
+            lat=[xy.getCoordinates()[0] for xy in relocateSol.getChargingStationList()],
+            lon=[xy.getCoordinates()[1] for xy in relocateSol.getChargingStationList()],
+            marker={
+                'symbol': 'circle',
+                'size': 15,
+                'color': 'green',
+                'allowoverlap': True
+            },
+            text = ["Charging Station" for xy in relocateSol.getChargingStationList()],
+            textposition = "bottom right",
+            showlegend=False
+        )
+    )
+
+    # Add the order location markers
+    fig.add_trace(
+        go.Scattermapbox(
+            mode='markers+text',
+            lat=[xy.getDestination().getCoordinates()[0] for xy in relocateSol.getOrderList()],
+            lon=[xy.getDestination().getCoordinates()[1] for xy in relocateSol.getOrderList()],
+            marker={
+                'symbol': 'circle',
+                'size': 10,
+                'color': 'yellow',
+                'allowoverlap': True
+            },
+            text = ["Order" for xy in relocateSol.getOrderList()],
+            textposition = "bottom right",
+            showlegend=False
+        )
+    )
+
+    
+
+    #lats = [xy[1] for feature in featureCollection['features'] for xy in feature['geometry']['coordinates']]
+    #lons = [xy[0] for feature in featureCollection['features'] for xy in feature['geometry']['coordinates']]
+
+    center_lat = depot.getCoordinates()[0] #(min(lats) + max(lats)) / 2
+    center_lon = depot.getCoordinates()[1] #(min(lons) + max(lons)) / 2
+    
+    fig.update_layout(
+        mapbox = {
+            'center': { 'lon':  center_lon, 'lat': center_lat}
+        }
+    )
+
+    with open('./output/result.html', 'w') as f:
+       f.write(fig.to_html())
+       f.close()
+    
+    #image_io = fig.to_image(format="png", width=600, height=600)
+
+    #Image(image_io)
+
+
 
     return 0
 
