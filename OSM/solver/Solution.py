@@ -189,26 +189,115 @@ class Solution():
         # Return the relocateSolutionList
         return relocateSolutionList
 
-    def getExchangeSolutions(self, orderIndex: int) -> list[Self]:
-        # Resolve the order form the list of orders to compare
-        currentOrder = self.orderList[orderIndex]
+    def getExchangeSolutions(self, exchangeOrder: Order, maximumLengthDelta: float = FLOAT_POSITIVE_INFINITY, insertChargingOrders: bool = False) -> list[Self]:
+        # Resolve the drone, tour, index and tour distance of the exchange order
+        exchangeOrderDrone = self.getDroneByOrder(exchangeOrder)
+        exchangeTourOrders = self.getDroneTour(exchangeOrderDrone, False)
+        exchangeOrderIndex = exchangeTourOrders.index(exchangeOrder)
+        exchangeTourDistance = self.getDroneTourDistance(exchangeOrderDrone, True)
 
-        # Create an empty solution list for the swaps
+        # Create an empty solution list for the exchanges
         exchangeSolutionList = []
 
-        # Loop through all orders to search for swap partners
-        for swapPartnerOrder in self.orderList:
-            # Check if the swap partner is the current order and continue
+        # Check if the exchange order is swapable (not first order)
+        if (exchangeOrderIndex == 0): return exchangeSolutionList
 
-            if (swapPartnerOrder == currentOrder): continue
+        # Check if the exchange order is swapable (not last order)
+        if (exchangeOrderIndex == (len(exchangeTourOrders) - 1)): return exchangeSolutionList
 
-            # TODO: Implement the swap
+        # Loop through the list of drones
+        for partnerDrone in self.droneList:
+            # Check if the exchange partner is the same drone
+            if (partnerDrone == exchangeOrderDrone): continue
+
+            # Resolve the tour and tour length with recharges
+            partnerTourOrders = self.getDroneTour(partnerDrone, False)
+            partnerTourDistance = self.getDroneTourDistance(partnerDrone, True)
+
+            # Loop over the tour of the partner drone for exchanges
+            for partnerTourIndex in range(1, len(partnerTourOrders) -1, 1):
+                # Use a dedicated function to calculate the path delta for the exchange swap
+                lengthDelta = self.calculateExchangePathLengthDelta(
+                    (exchangeTourOrders[exchangeOrderIndex - 1], exchangeTourOrders[exchangeOrderIndex], exchangeTourOrders[exchangeOrderIndex + 1]), 
+                    (partnerTourOrders[partnerTourIndex - 1], partnerTourOrders[partnerTourIndex], partnerTourOrders[partnerTourIndex + 1])
+                )
+
+                # Check the lengthDelta against the upper boundary
+                if (lengthDelta >= maximumLengthDelta): continue
+
+                # Create the exchange solution by changing the given paths
+                exchangeSolution = self.createExchangeSolution(
+                    exchangeOrderDrone, partnerDrone, exchangeOrderIndex, partnerTourIndex)
+                
+                # Check if the new solution should have reinserted charging orders
+                if insertChargingOrders:
+                    # Insert charging orders back into the drone tours, if not possible continue
+                    if not exchangeSolution.insertChargingOrders(exchangeOrderDrone): continue
+                    if not exchangeSolution.insertChargingOrders(partnerDrone): continue
+
+                    # Resolve the updated tour distance of the reloacate order and partner tour
+                    updatedExchangeTourDistance = exchangeSolution.getDroneTourDistance(exchangeOrderDrone, True)
+                    updatedPartnerTourDistance = exchangeSolution.getDroneTourDistance(partnerDrone, True)
+
+                    # Get the length of the extended tours and recalculate the length delta with the length of the pre exchange tours
+                    lengthDelta = (updatedExchangeTourDistance + updatedPartnerTourDistance - exchangeTourDistance - partnerTourDistance)
+
+                    # Check the recalculated lengthDelta against the upper boundary
+                    if (lengthDelta >= maximumLengthDelta): continue
+
+                # All checks done so save the solution
+                exchangeSolutionList.append(exchangeSolution)
 
         # Return the exchangeSolutionList
         return exchangeSolutionList
 
-    def getCrossSolutions(self, orderIndex: int) -> list[Self]:
-        return []
+    def getCrossSolutions(self, crossOrder: Order, maximumLengthDelta: float = FLOAT_POSITIVE_INFINITY, insertChargingOrders: bool = False) -> list[Self]:
+        # Resolve the drone, tour, index and tour distance of the cross order
+        crossOrderDrone = self.getDroneByOrder(crossOrder)
+        crossTourOrders = self.getDroneTour(crossOrderDrone, False)
+        crossOrderIndex = crossTourOrders.index(crossOrder)
+        crossTourDistance = self.getDroneTourDistance(crossOrderDrone, True)
+
+        # Create an empty solution list for the crosses
+        crossSolutionList = []
+
+        # Check if the cross order is swapable (not first order)
+        if (crossOrderIndex == 0): return crossSolutionList
+
+        # Check if the cross order is swapable (not last order)
+        if (crossOrderIndex == (len(crossTourOrders) - 1)): return crossSolutionList
+
+        # Loop through the list of drones
+        for partnerDrone in self.droneList:
+            # Check if the cross partner is the same drone
+            if (partnerDrone == crossOrderDrone): continue
+
+            # Resolve the tour and tour length with recharges
+            partnerTourOrders = self.getDroneTour(partnerDrone, False)
+            partnerTourDistance = self.getDroneTourDistance(partnerDrone, True)
+
+            # Loop over the tour of the partner drone for crosses
+            for partnerTourIndex in range(1, len(partnerTourOrders) -1, 1):
+                # Use a dedicated function to calculate the path delta for the cross swap
+                lengthDelta = self.calculateCrossPathLengthDelta(
+                    (crossTourOrders[crossOrderIndex - 1], crossTourOrders[crossOrderIndex], crossTourOrders[crossOrderIndex + 1]), 
+                    (partnerTourOrders[partnerTourIndex - 1], partnerTourOrders[partnerTourIndex], partnerTourOrders[partnerTourIndex + 1])
+                )
+
+                # Check the lengthDelta against the upper boundary
+                if (lengthDelta >= maximumLengthDelta): continue
+
+                # Create the cross solution by changing the given paths
+                crossSolution = self.createCrossSolution(
+                    crossOrderDrone, partnerDrone, crossOrderIndex, partnerTourIndex)
+                
+                # 
+                
+                # All checks done so save the solution
+                crossSolutionList.append(crossSolution)
+
+        # Return the crossSolutionList
+        return crossSolutionList
     
     ################################################################################
     ############################### Two-Opt FUNCTIONS ##############################
@@ -270,6 +359,41 @@ class Solution():
 
         # Add the relocate order to the destination drone tour at the given destination tour index
         solutionCopy.solutionMatrix[destinationDrone].insert(destinationTourIndex, relocateOrder)
+
+        # Return the modified solution copy
+        return solutionCopy
+
+    ################################################################################
+    ############################### Exchange FUNCTIONS #############################
+    ################################################################################
+
+    def calculateExchangePathLengthDelta(self, firstPath: tuple[Order, Order, Order], secondPath: tuple[Order, Order, Order]) -> float:
+        # Use the precalculation to get the path delta for exchange swap
+        lengthDelta = (
+            self.getOrderDistance(firstPath[0], secondPath[1])
+            + self.getOrderDistance(secondPath[1], firstPath[2])
+            + self.getOrderDistance(secondPath[0], firstPath[1])
+            + self.getOrderDistance(firstPath[1], secondPath[2])
+            - self.getOrderDistance(firstPath[0], firstPath[1])
+            - self.getOrderDistance(firstPath[1], firstPath[2])
+            - self.getOrderDistance(secondPath[0], secondPath[1])
+            - self.getOrderDistance(secondPath[1], secondPath[2])
+        )
+    
+        # Return the rounded result
+        return round(lengthDelta, 2)
+    
+    def createExchangeSolution(self, sourceDrone: Drone, destinationDrone: Drone, exchangeOrderIndex: int, destinationTourIndex: int) -> Self:
+        # Create a partly deep copy of the solution
+        solutionCopy = self.getSolutionCopy()
+
+        # Remove the exchange orders from the source and destination drone tour
+        exchangeOrder = solutionCopy.solutionMatrix[sourceDrone].pop(exchangeOrderIndex)
+        destinationTourOrder = solutionCopy.solutionMatrix[destinationDrone].pop(destinationTourIndex)
+
+        # Add the exchange orders to the source and destination drone tour at the given index
+        solutionCopy.solutionMatrix[sourceDrone].insert(exchangeOrderIndex, destinationTourOrder)
+        solutionCopy.solutionMatrix[destinationDrone].insert(destinationTourIndex, exchangeOrder)
 
         # Return the modified solution copy
         return solutionCopy
