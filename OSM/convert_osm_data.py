@@ -180,6 +180,8 @@ def main():
 
     print(featureCollection)
 
+    print(f'---------------------------------------------------------------------------------------------------------------')
+
     # Print 2Opt Solution
     droneFlightFeatureList = []
 
@@ -190,6 +192,8 @@ def main():
 
     print(featureCollection)
 
+    print(f'---------------------------------------------------------------------------------------------------------------')
+
     # Print Relocate Solution
     droneFlightFeatureList = []
 
@@ -199,6 +203,8 @@ def main():
     featureCollection = FeatureCollection([depotFeature] + chargingStationFeatureList + orderFeatureList + droneFlightFeatureList)
 
     print(featureCollection)
+
+    print(f'---------------------------------------------------------------------------------------------------------------')
 
 
     # Plot the feature collection on the map
