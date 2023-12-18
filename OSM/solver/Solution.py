@@ -397,6 +397,28 @@ class Solution():
 
         # Return the modified solution copy
         return solutionCopy
+    
+    ################################################################################
+    ############################### Cross FUNCTIONS ################################
+    ################################################################################
+
+    def calculateCrossPathLengthDelta(self, firstTour: list[Order], secondTour: list[Order], firstPath: tuple[Order, Order, Order], secondPath: tuple[Order, Order, Order]) -> float:
+        # Use the precalculation to get the path delta for exchange swap
+        lengthDelta = (
+            self.getOrderDistance(firstPath[0], secondPath[1])
+            + self.getOrderDistance(secondPath[1], firstPath[2])
+            + self.getOrderDistance(secondPath[0], firstPath[1])
+            + self.getOrderDistance(firstPath[1], secondPath[2])
+
+            # TODO Calculate new subtours plus cross distance.
+
+
+            - self.getTourDistance(firstTour)
+            - self.getTourDistance(secondTour)
+        )
+    
+        # Return the rounded result
+        return round(lengthDelta, 2)
 
     ################################################################################
     ############################### SUPPORT FUNCTIONS ##############################
