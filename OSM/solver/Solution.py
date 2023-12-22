@@ -30,6 +30,9 @@ class Solution():
         # Merged building list of depot, charging stations and order destinations for distance precalculation
         self.buildingList = [depot] + chargingStationList + [order.getDestination() for order in orderList]
 
+        # Create a dictionary to look up the corresponding order for each building in a constant time
+        self.buildingOrderDictionary = dict(map(lambda order: (order.getDestination(), order), self.orderList))
+
         # Precalculate the distance matrix between the different buildings 
         self.distanceMatrix = Solution.CalculateDistanceMatrix(self.buildingList)
         
@@ -60,6 +63,10 @@ class Solution():
         # Return the buildingList
         return self.buildingList
     
+    def getBuildingOrderDictionary(self) -> dict[Building, Order]:
+        # Return the buildingOrderDictionary
+        return self.buildingOrderDictionary
+
     def getDistanceMatrix(self) -> dict[Building, dict[Building, float]]:
         # Return the distanceMatrix
         return self.distanceMatrix
@@ -539,6 +546,10 @@ class Solution():
     def getOrderBuildingDistance(self, sourceOrder: Order, destinationBuilding: Building) -> float:
         # Use the precalculated distanceMatrix to get the distance between the order and building
         return self.distanceMatrix[sourceOrder.getDestination()][destinationBuilding]
+    
+    def getClosestBuildings(self, sourceBuilding: Building) -> list[Building]:
+        # Use the precalculated distanceMatrix to get the presorted keys building list
+        return list(self.distanceMatrix[sourceBuilding].keys())
 
     def getDroneByOrder(self, order: Order) -> Drone:
         # Use the built-in function to get the drone that has the given order in its orderList
@@ -613,5 +624,25 @@ class Solution():
                 distanceMatrix[innerBuilding][outerBuilding] = calculatedDistance
                 distanceMatrix[outerBuilding][innerBuilding] = calculatedDistance
 
+        # Loop through the complete building list to sort the inner dict by distance
+        for building in buildingList:
+            # Since python 3.7 dicts preserve the insertion order so we can use this to save the buildings sorted by distance
+            distanceMatrix[building] = dict(sorted(distanceMatrix[building].items(), key=lambda x: x[1]))
+
         # Return the distance matrix
         return distanceMatrix
+    
+    def CalculateOrderNeighborhoodMatrix(orderList: list[Order], distanceMatrix: dict[Building, dict[Building, float]]) -> dict[Order, list[Order]]:
+        # Create a dictionary to look up the corresponding order for each building in a constant time
+        buildingOrderDictionary = dict(map(lambda order: (order.getDestination(), order), orderList))
+
+        # Create an empty dictionary for the order neighborhood
+        orderNeighborhoodMatrix = dict()
+
+        # Loop through the order list once
+        for order in orderList:
+            # Resolve the neighborhood building list from the distance matrix by the order destination
+            neighborhoodBuildingList = list(distanceMatrix[order.getDestination()].keys())
+
+            orderNeighborhoodMatrix[order] = [buildingOrderDictionary[neighborBuilding] for neighborBuilding in neighborhoodBuildingList if neighborBuilding in buildingOrderDictionary]
+            orderNeighborhoodMatrix[order] = [buildingOrderDictionary[neighborBuilding] for neighborBuilding in neighborhoodBuildingList if neighborBuilding in buildingOrderDictionary]

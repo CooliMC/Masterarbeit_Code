@@ -138,9 +138,35 @@ def main():
     print(f'Calcualte the RelocateSolutions in {(end - start) * 1000} ms with {iterations} iterations and tour sum distance from {beforeRelocateSum} m to {afterRelocateSum} m (Delta: {afterRelocateSum - beforeRelocateSum} m)')
 
     print(f'---------------------------------------------------------------------------------------------------------------')
+    exchangeSol = relocateSol
 
-    for drone, orders in relocateSol.getSolutionMatrix().items():
-        print(f'-> Drone (milageAvailable={drone.getRemainingFlightDistance()}, tourDistance={relocateSol.getDroneTourDistance(drone)})')
+    beforeExchangeSum = sum(exchangeSol.getDroneTourDistance(drone) for drone in exchangeSol.getDroneList())
+    print(f'Pre Exchange tour sum distance of {beforeExchangeSum} m')
+
+    start = time.time()
+    iterations = 0
+
+    for order in exchangeSol.getOrderList():
+        print(f'Calculating ExchangeSolutions for Order {order}')
+        while True:
+            iterations += 1
+            betterSolution = min(exchangeSol.getExchangeSolutions(order, 0), key = lambda x: sum(x.getDroneTourDistance(y) for y in x.getDroneList()), default = exchangeSol)
+            if sum(betterSolution.getDroneTourDistance(y) for y in betterSolution.getDroneList()) >= sum(exchangeSol.getDroneTourDistance(y) for y in exchangeSol.getDroneList()): break
+            exchangeSol = betterSolution
+
+    for drone in exchangeSol.getDroneList():
+        print(f'Insert Charging order into ExchangeSolution fro drone {drone}')
+        if not exchangeSol.insertChargingOrders(drone): print(f'Corrupt Solution found ...')
+    
+    end = time.time()
+
+    afterExchangeSum = sum(exchangeSol.getDroneTourDistance(drone) for drone in exchangeSol.getDroneList())
+    print(f'Calcualte the ExchangeSolutions in {(end - start) * 1000} ms with {iterations} iterations and tour sum distance from {beforeExchangeSum} m to {afterExchangeSum} m (Delta: {afterExchangeSum - beforeExchangeSum} m)')
+
+    print(f'---------------------------------------------------------------------------------------------------------------')
+
+    for drone, orders in exchangeSol.getSolutionMatrix().items():
+        print(f'-> Drone (milageAvailable={drone.getRemainingFlightDistance()}, tourDistance={exchangeSol.getDroneTourDistance(drone)})')
         for order in orders:
             print(f'---> Order (destination={order.getDestination()})')
 
@@ -198,6 +224,18 @@ def main():
     droneFlightFeatureList = []
 
     for drone, orders in relocateSol.getSolutionMatrix().items():
+        droneFlightFeatureList.append(Feature(geometry=LineString(list(map(lambda x: x.getDestination().getCoordinates()[::-1], orders))), properties={ 'stroke': colorList[droneList.index(drone)], 'stroke-width': '3', 'stroke-opacity': 1 }))
+
+    featureCollection = FeatureCollection([depotFeature] + chargingStationFeatureList + orderFeatureList + droneFlightFeatureList)
+
+    print(featureCollection)
+
+    print(f'---------------------------------------------------------------------------------------------------------------')
+
+    # Print Exchange Solution
+    droneFlightFeatureList = []
+
+    for drone, orders in exchangeSol.getSolutionMatrix().items():
         droneFlightFeatureList.append(Feature(geometry=LineString(list(map(lambda x: x.getDestination().getCoordinates()[::-1], orders))), properties={ 'stroke': colorList[droneList.index(drone)], 'stroke-width': '3', 'stroke-opacity': 1 }))
 
     featureCollection = FeatureCollection([depotFeature] + chargingStationFeatureList + orderFeatureList + droneFlightFeatureList)
