@@ -153,7 +153,7 @@ class Solution():
             partnerTourDistance = self.getDroneTourDistance(partnerDrone, True)
 
             # Loop over the tour of the partner drone for relocates
-            for partnerTourIndex in range(0, len(partnerTourOrders) -1, 1):
+            for partnerTourIndex in range(0, len(partnerTourOrders) - 1, 1):
                 # Use a dedicated function to calculate the path delta for the relocate shift
                 lengthDelta = self.calculateRelocatePathLengthDelta(
                     (relocateTourOrders[relocateOrderIndex - 1], relocateTourOrders[relocateOrderIndex], relocateTourOrders[relocateOrderIndex + 1]), 
@@ -215,7 +215,7 @@ class Solution():
             partnerTourDistance = self.getDroneTourDistance(partnerDrone, True)
 
             # Loop over the tour of the partner drone for exchanges
-            for partnerTourIndex in range(1, len(partnerTourOrders) -1, 1):
+            for partnerTourIndex in range(1, len(partnerTourOrders) - 1, 1):
                 # Use a dedicated function to calculate the path delta for the exchange swap
                 lengthDelta = self.calculateExchangePathLengthDelta(
                     (exchangeTourOrders[exchangeOrderIndex - 1], exchangeTourOrders[exchangeOrderIndex], exchangeTourOrders[exchangeOrderIndex + 1]), 
@@ -277,11 +277,11 @@ class Solution():
             partnerTourDistance = self.getDroneTourDistance(partnerDrone, True)
 
             # Loop over the tour of the partner drone for crosses
-            for partnerTourIndex in range(1, len(partnerTourOrders) -1, 1):
+            for partnerTourIndex in range(1, len(partnerTourOrders) - 1, 1):
                 # Use a dedicated function to calculate the path delta for the cross swap
                 lengthDelta = self.calculateCrossPathLengthDelta(
-                    (crossTourOrders[crossOrderIndex - 1], crossTourOrders[crossOrderIndex], crossTourOrders[crossOrderIndex + 1]), 
-                    (partnerTourOrders[partnerTourIndex - 1], partnerTourOrders[partnerTourIndex], partnerTourOrders[partnerTourIndex + 1])
+                    (crossTourOrders[crossOrderIndex], crossTourOrders[crossOrderIndex + 1]), 
+                    (partnerTourOrders[partnerTourIndex], partnerTourOrders[partnerTourIndex + 1])
                 )
 
                 # Check the lengthDelta against the upper boundary
@@ -291,7 +291,21 @@ class Solution():
                 crossSolution = self.createCrossSolution(
                     crossOrderDrone, partnerDrone, crossOrderIndex, partnerTourIndex)
                 
-                # 
+                # Check if the new solution should have reinserted charging orders
+                if insertChargingOrders:
+                    # Insert charging orders back into the drone tours, if not possible continue
+                    if not crossSolution.insertChargingOrders(crossOrderDrone): continue
+                    if not crossSolution.insertChargingOrders(partnerDrone): continue
+
+                    # Resolve the updated tour distance of the cross order and partner tour
+                    updatedCrossTourDistance = crossSolution.getDroneTourDistance(crossOrderDrone, True)
+                    updatedPartnerTourDistance = crossSolution.getDroneTourDistance(partnerDrone, True)
+
+                    # Get the length of the extended tours and recalculate the length delta with the length of the pre crossed tours
+                    lengthDelta = (updatedCrossTourDistance + updatedPartnerTourDistance - crossTourDistance - partnerTourDistance)
+
+                    # Check the recalculated lengthDelta against the upper boundary
+                    if (lengthDelta >= maximumLengthDelta): continue
                 
                 # All checks done so save the solution
                 crossSolutionList.append(crossSolution)
@@ -402,23 +416,36 @@ class Solution():
     ############################### Cross FUNCTIONS ################################
     ################################################################################
 
-    def calculateCrossPathLengthDelta(self, firstTour: list[Order], secondTour: list[Order], firstPath: tuple[Order, Order, Order], secondPath: tuple[Order, Order, Order]) -> float:
+    def calculateCrossPathLengthDelta(self, firstPath: tuple[Order, Order], secondPath: tuple[Order, Order]) -> float:
         # Use the precalculation to get the path delta for exchange swap
         lengthDelta = (
             self.getOrderDistance(firstPath[0], secondPath[1])
-            + self.getOrderDistance(secondPath[1], firstPath[2])
             + self.getOrderDistance(secondPath[0], firstPath[1])
-            + self.getOrderDistance(firstPath[1], secondPath[2])
-
-            # TODO Calculate new subtours plus cross distance.
-
-
-            - self.getTourDistance(firstTour)
-            - self.getTourDistance(secondTour)
+            - self.getOrderDistance(firstPath[0], firstPath[1])
+            - self.getOrderDistance(secondPath[0], secondPath[1])
         )
     
         # Return the rounded result
         return round(lengthDelta, 2)
+    
+    def createCrossSolution(self, sourceDrone: Drone, destinationDrone: Drone, crossOrderIndex: int, destinationTourIndex: int) -> Self:
+        # Create a partly deep copy of the solution
+        solutionCopy = self.getSolutionCopy()
+
+        # Resolve the source and destination tour from the solution matrix
+        sourceDroneTour = solutionCopy.solutionMatrix[sourceDrone]
+        destinationDroneTour = solutionCopy.solutionMatrix[destinationDrone]
+
+        # Create the crossover tour by slicing the drone tours after the order indexes and adding them back together
+        sourceDroneCrossoverTour = sourceDroneTour[:(crossOrderIndex + 1)] + destinationDroneTour[(destinationTourIndex + 1):]
+        destinationDroneCrossoverTour = destinationDroneTour[:(destinationTourIndex + 1)] + sourceDroneTour[(crossOrderIndex + 1):]
+
+        # Set the crossover tours as the new solution tour for the drones
+        solutionCopy.solutionMatrix[sourceDrone] = sourceDroneCrossoverTour
+        solutionCopy.solutionMatrix[destinationDrone] = destinationDroneCrossoverTour
+
+        # Return the modified solution copy
+        return solutionCopy
 
     ################################################################################
     ############################### SUPPORT FUNCTIONS ##############################
