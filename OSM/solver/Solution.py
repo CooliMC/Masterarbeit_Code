@@ -30,11 +30,11 @@ class Solution():
         # Merged building list of depot, charging stations and order destinations for distance precalculation
         self.buildingList = [depot] + chargingStationList + [order.getDestination() for order in orderList]
 
-        # Create a dictionary to look up the corresponding order for each building in a constant time
-        self.buildingOrderDictionary = dict(map(lambda order: (order.getDestination(), order), self.orderList))
-
         # Precalculate the distance matrix between the different buildings 
         self.distanceMatrix = Solution.CalculateDistanceMatrix(self.buildingList)
+
+        # Precalculate the order neighborhood matrix with the distance matrix for improved neighborhood search alogirthms
+        self.orderNeighborhoodMatrix = Solution.CalculateOrderNeighborhoodMatrix(self.orderList, self.distanceMatrix)
         
         # Create and prefilled solution matrix with the drones as key and value list of orders
         self.solutionMatrix = dict(map(lambda drone: (drone, [Order(depot)]), self.droneList))
@@ -62,14 +62,14 @@ class Solution():
     def getBuildingList(self) -> list[Building]:
         # Return the buildingList
         return self.buildingList
-    
-    def getBuildingOrderDictionary(self) -> dict[Building, Order]:
-        # Return the buildingOrderDictionary
-        return self.buildingOrderDictionary
 
     def getDistanceMatrix(self) -> dict[Building, dict[Building, float]]:
         # Return the distanceMatrix
         return self.distanceMatrix
+    
+    def getOrderNeighborhoodMatrix(self) -> dict[Order, list[Order]]:
+        # Return the orderNeighborhoodMatrix
+        return self.orderNeighborhoodMatrix
     
     def getSolutionMatrix(self) -> dict[Drone, list[Order]]:
         # Return the solutionMatrix
@@ -644,5 +644,9 @@ class Solution():
             # Resolve the neighborhood building list from the distance matrix by the order destination
             neighborhoodBuildingList = list(distanceMatrix[order.getDestination()].keys())
 
-            orderNeighborhoodMatrix[order] = [buildingOrderDictionary[neighborBuilding] for neighborBuilding in neighborhoodBuildingList if neighborBuilding in buildingOrderDictionary]
-            orderNeighborhoodMatrix[order] = [buildingOrderDictionary[neighborBuilding] for neighborBuilding in neighborhoodBuildingList if neighborBuilding in buildingOrderDictionary]
+            # Use the built-in list conversion to check all neighborhood buildings and convert them back to orders
+            orderNeighborhoodMatrix[order] = [buildingOrderDictionary[neighborBuilding] for 
+                neighborBuilding in neighborhoodBuildingList if neighborBuilding in buildingOrderDictionary]
+        
+        # Return the order neighborhood matrix
+        return orderNeighborhoodMatrix
