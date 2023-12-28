@@ -416,13 +416,21 @@ class Solution():
         # Create a partly deep copy of the solution
         solutionCopy = self.getSolutionCopy()
 
+        # Resolve the source and destination drone tour
+        sourceDroneTour = solutionCopy.getDroneTour(sourceDrone, False)
+        destinationDroneTour = solutionCopy.getDroneTour(destinationDrone, False)
+
         # Remove the exchange orders from the source and destination drone tour
-        exchangeOrder = solutionCopy.solutionMatrix[sourceDrone].pop(exchangeOrderIndex)
-        destinationTourOrder = solutionCopy.solutionMatrix[destinationDrone].pop(destinationTourIndex)
+        exchangeOrder = sourceDroneTour.pop(exchangeOrderIndex)
+        destinationTourOrder = destinationDroneTour.pop(destinationTourIndex)
 
         # Add the exchange orders to the source and destination drone tour at the given index
-        solutionCopy.solutionMatrix[sourceDrone].insert(exchangeOrderIndex, destinationTourOrder)
-        solutionCopy.solutionMatrix[destinationDrone].insert(destinationTourIndex, exchangeOrder)
+        sourceDroneTour.insert(exchangeOrderIndex, destinationTourOrder)
+        destinationDroneTour.insert(destinationTourIndex, exchangeOrder)
+
+        # Update the orderList of the source and destination drone
+        solutionCopy.solutionMatrix[sourceDrone] = sourceDroneTour
+        solutionCopy.solutionMatrix[destinationDrone] = destinationDroneTour
 
         # Return the modified solution copy
         return solutionCopy

@@ -139,7 +139,7 @@ def main():
 
     print(f'---------------------------------------------------------------------------------------------------------------')
     exchangeSol = relocateSol
-    return 0
+    
     beforeExchangeSum = sum(exchangeSol.getDroneTourDistance(drone) for drone in exchangeSol.getDroneList())
     print(f'Pre Exchange tour sum distance of {beforeExchangeSum} m')
 
@@ -164,7 +164,7 @@ def main():
     print(f'Calcualte the ExchangeSolutions in {(end - start) * 1000} ms with {iterations} iterations and tour sum distance from {beforeExchangeSum} m to {afterExchangeSum} m (Delta: {afterExchangeSum - beforeExchangeSum} m)')
 
     print(f'---------------------------------------------------------------------------------------------------------------')
-
+    return 0
     for drone, orders in exchangeSol.getSolutionMatrix().items():
         print(f'-> Drone (milageAvailable={drone.getRemainingFlightDistance()}, tourDistance={exchangeSol.getDroneTourDistance(drone)})')
         for order in orders:
