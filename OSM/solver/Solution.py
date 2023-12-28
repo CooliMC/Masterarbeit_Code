@@ -375,11 +375,19 @@ class Solution():
         # Create a partly deep copy of the solution
         solutionCopy = self.getSolutionCopy()
 
+        # Resolve the source and destination drone tour
+        sourceDroneTour = solutionCopy.getDroneTour(sourceDrone, False)
+        destinationDroneTour = solutionCopy.getDroneTour(destinationDrone, False)
+
         # Remove the relocate order from the source drone tour
-        solutionCopy.solutionMatrix[sourceDrone].remove(relocateOrder)
+        sourceDroneTour.remove(relocateOrder)
 
         # Add the relocate order to the destination drone tour at the given destination tour index
-        solutionCopy.solutionMatrix[destinationDrone].insert(destinationTourIndex, relocateOrder)
+        destinationDroneTour.insert(destinationTourIndex, relocateOrder)
+
+        # Update the orderList of the source and destination drone
+        solutionCopy.solutionMatrix[sourceDrone] = sourceDroneTour
+        solutionCopy.solutionMatrix[destinationDrone] = destinationDroneTour
 
         # Return the modified solution copy
         return solutionCopy

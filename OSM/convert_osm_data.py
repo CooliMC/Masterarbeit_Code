@@ -139,7 +139,7 @@ def main():
 
     print(f'---------------------------------------------------------------------------------------------------------------')
     exchangeSol = relocateSol
-
+    return 0
     beforeExchangeSum = sum(exchangeSol.getDroneTourDistance(drone) for drone in exchangeSol.getDroneList())
     print(f'Pre Exchange tour sum distance of {beforeExchangeSum} m')
 
