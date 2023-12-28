@@ -176,8 +176,9 @@ def main():
         print(f'Calculating CrossSolutions for Order {order}')
         while True:
             iterations += 1
-            betterSolution = min(crossSol.getCrossSolutions(order, 0), key = lambda x: sum(x.getDroneTourDistance(y) for y in x.getDroneList()), default = crossSol)
-            if sum(betterSolution.getDroneTourDistance(y) for y in betterSolution.getDroneList()) >= sum(crossSol.getDroneTourDistance(y) for y in crossSol.getDroneList()): break
+            betterSolution = min(crossSol.getCrossSolutions(order, 0), key = lambda x: x.getTimeScore(), default = crossSol) #sum(x.getDroneTourDistance(y) for y in x.getDroneList()), default = crossSol)
+            #if sum(betterSolution.getDroneTourDistance(y) for y in betterSolution.getDroneList()) >= sum(crossSol.getDroneTourDistance(y) for y in crossSol.getDroneList()): break
+            if betterSolution.getTimeScore() >= crossSol.getTimeScore(): break
             crossSol = betterSolution
 
     for drone in crossSol.getDroneList():
@@ -190,7 +191,7 @@ def main():
     print(f'Calcualte the CrossSolutions in {(end - start) * 1000} ms with {iterations} iterations and tour sum distance from {beforeCrossSum} m to {afterCrossSum} m (Delta: {afterCrossSum - beforeCrossSum} m)')
 
     print(f'---------------------------------------------------------------------------------------------------------------')
-    
+    return 0
     for drone, orders in exchangeSol.getSolutionMatrix().items():
         print(f'-> Drone (milageAvailable={drone.getRemainingFlightDistance()}, tourDistance={exchangeSol.getDroneTourDistance(drone)})')
         for order in orders:
