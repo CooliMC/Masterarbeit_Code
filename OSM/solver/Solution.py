@@ -79,10 +79,23 @@ class Solution():
     ############################### SCORE FUNCTIONS ################################
     ################################################################################
 
+    def getDistanceScore(self) -> float:
+        # Sum up the tour distance of all drones as a factor for the score calculation
+        tourDistanceSum = sum(self.getDroneTourDistance(drone, True) for drone in self.droneList)
+
+        return tourDistanceSum
+        # Calculate the score of the drones by the distance with a formular like this:
+        # sum(distance of each drone) * (1 + (longestDroneDistance - shortestDroneDistance))
+
     def getTimeScore(self) -> float:
-        return sum()
-        # Calculate the score of the by the time with a formular like this:
-        # sum(time of each drone) * (1 + (longestDroneTime - shortestDroneTime))
+        # Get the tour time list of all drones as a factor for the score calculation
+        droneTourTimeList = [self.getDroneTourTime(drone, True) for drone in self.droneList]
+
+        # Calculate the average drone tour time as a factor for the score calculation 
+        avgDroneTourTime = (sum(droneTourTimeList) / len(droneTourTimeList))
+        
+        # Sum up the drone tour time and scale the score by the difference between the min/max and avg drone tour time
+        return sum(droneTourTimeList) * (1 + ((max(droneTourTimeList) - min(droneTourTimeList)) / avgDroneTourTime) / 2)
 
     ################################################################################
     ############################ NEIGHBORHOOD FUNCTIONS ############################
@@ -582,6 +595,18 @@ class Solution():
     def getDroneTourDistance(self, drone: Drone, includeChargingOrders: bool = True) -> float:
         # Use the getDroneTour and getTourDistance function to get the drone tour distance
         return self.getTourDistance(self.getDroneTour(drone, includeChargingOrders))
+    
+    def getDroneTourFlightTime(self, drone: Drone, includeChargingOrders: bool = True) -> float:
+        # Use the getDroneTourDistance and calculateFlightTime function to get the drone tour flight time
+        return drone.calculateFlightTime(self.getDroneTourDistance(drone, includeChargingOrders))
+    
+    def getDroneTourDwellTime(self, drone: Drone, includeChargingOrders: bool = True) -> int:
+        # Use the getDroneTour and getDwellTime function to get the drone tour dwell time (sum)
+        return sum(droneOrder.getDwellTime() for droneOrder in self.getDroneTour(drone, includeChargingOrders))
+    
+    def getDroneTourTime(self, drone: Drone, includeChargingOrders: bool = True) -> float:
+        # Use the getDroneTourFlightTime and getDroneTourDwellTime function to get the drone tour time (flight + dwell time)
+        return self.getDroneTourFlightTime(drone, includeChargingOrders) + self.getDroneTourDwellTime(drone, includeChargingOrders)
 
     def getTourDistance(self, tour: list[Order]) -> float:
         # Initialize the tour distance
@@ -648,6 +673,7 @@ class Solution():
         # Return the distance matrix
         return distanceMatrix
     
+    @staticmethod
     def CalculateOrderNeighborhoodMatrix(orderList: list[Order], distanceMatrix: dict[Building, dict[Building, float]]) -> dict[Order, list[Order]]:
         # Create a dictionary to look up the corresponding order for each building in a constant time
         buildingOrderDictionary = dict(map(lambda order: (order.getDestination(), order), orderList))
