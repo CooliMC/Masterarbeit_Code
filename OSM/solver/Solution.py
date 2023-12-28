@@ -112,7 +112,7 @@ class Solution():
 
                 # Create the two-opt solution by changing the given paths
                 twoOptSolution = self.createTwoOptSolution(
-                    drone, outerTourIndex, innerTourIndex, tourOrders)
+                    drone, outerTourIndex, innerTourIndex)
                 
                 # Check if the new solution should have reinserted charging orders
                 if insertChargingOrders:
@@ -336,16 +336,16 @@ class Solution():
         # Return the rounded result
         return round(lengthDelta, 2)
     
-    def createTwoOptSolution(self, drone: Drone, firstPathIndex: int, secondPathIndex: int, droneTour: list[Order] = None) -> Self:
-        # Check if the droneTour parameter is set or resolve it
-        if droneTour is None: droneTour = self.getDroneTour(drone)
+    def createTwoOptSolution(self, drone: Drone, firstPathIndex: int, secondPathIndex: int) -> Self:
+        # Create a partly deep copy of the solution
+        solutionCopy = self.getSolutionCopy()
+        
+        # Resolve the droneTour from the solution copy
+        droneTour = solutionCopy.getDroneTour(drone, False)
 
         # Reconstruct the droneTour by performing the two-opt swap with the pathIndex
         droneTour = droneTour[:(firstPathIndex + 1)] + droneTour[
             secondPathIndex:firstPathIndex:-1] + droneTour[(secondPathIndex + 1):]
-
-        # Create a partly deep copy of the solution
-        solutionCopy = self.getSolutionCopy()
 
         # Update the orderList of the drone with the droneTour
         solutionCopy.solutionMatrix[drone] = droneTour
@@ -520,13 +520,13 @@ class Solution():
         # Charge order insert worked
         return True
 
-    def getSolutionCopy(self) -> Self:
+    def getSolutionCopy(self, includeChargingOrders: bool = True) -> Self:
         # Use the built-in function to copy the solution
         solutionCopy = copy(self)
 
         # Create a shallow copy of the solution matrix with dict function
         solutionCopy.solutionMatrix = dict(solutionCopy.solutionMatrix)
-
+        # TODO: Check and remove charging orders if set
         # Loop over the shallow copy of the solution matrix
         for drone, orderList in solutionCopy.solutionMatrix.items():
             # Create a shallow copy of the orderList with the list function

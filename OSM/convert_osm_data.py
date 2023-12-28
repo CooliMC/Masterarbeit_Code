@@ -244,6 +244,7 @@ def main():
 
     print(f'---------------------------------------------------------------------------------------------------------------')
 
+    return 0
 
     # Plot the feature collection on the map
     fig = go.Figure(
