@@ -456,8 +456,8 @@ class Solution():
         solutionCopy = self.getSolutionCopy()
 
         # Resolve the source and destination tour from the solution matrix
-        sourceDroneTour = solutionCopy.solutionMatrix[sourceDrone]
-        destinationDroneTour = solutionCopy.solutionMatrix[destinationDrone]
+        sourceDroneTour = solutionCopy.getDroneTour(sourceDrone, False)
+        destinationDroneTour = solutionCopy.getDroneTour(destinationDrone, False)
 
         # Create the crossover tour by slicing the drone tours after the order indexes and adding them back together
         sourceDroneCrossoverTour = sourceDroneTour[:(crossOrderIndex + 1)] + destinationDroneTour[(destinationTourIndex + 1):]
