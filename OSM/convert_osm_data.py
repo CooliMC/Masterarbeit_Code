@@ -114,6 +114,10 @@ def main():
     print(f'---------------------------------------------------------------------------------------------------------------')
     relocateSol = twoOptSol
 
+    
+    print(f'---------------------------------------------------------------------------------------------------------------')
+    relocateSol = twoOptSol
+
     beforeRelocateSum = sum(relocateSol.getDroneTourDistance(drone) for drone in relocateSol.getDroneList())
     print(f'Pre Relocate tour sum distance of {beforeRelocateSum} m')
 

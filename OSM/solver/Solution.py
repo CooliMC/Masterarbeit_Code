@@ -98,7 +98,29 @@ class Solution():
         return sum(droneTourTimeList) * (1 + ((max(droneTourTimeList) - min(droneTourTimeList)) / avgDroneTourTime) / 2)
 
     ################################################################################
-    ############################ NEIGHBORHOOD FUNCTIONS ############################
+    ####################### NEIGHBORHOOD SOLUTION FUNCTIONS ########################
+    ################################################################################
+
+    def getNeighborhoodSolutions(self, maximumLengthDelta: float = FLOAT_POSITIVE_INFINITY, insertChargingOrders: bool = False) -> list[Self]:
+        # Create an empty solution list for the neighborhood
+        neighborhoodSolutionList = []
+
+        # Loop through the order list to calculate the neighborhood for each order
+        for neighborhoodOrder in self.orderList:
+            # Run the RelocateSolution algorithm to get all shifted solutions and add them to the neighborhoodSolutionList
+            neighborhoodSolutionList.extend(self.getRelocateSolutions(neighborhoodOrder, maximumLengthDelta, insertChargingOrders))
+
+            # Run the ExchangeSolution algorithm to get all swapped solutions and add them to the neighborhoodSolutionList
+            neighborhoodSolutionList.extend(self.getExchangeSolutions(neighborhoodOrder, maximumLengthDelta, insertChargingOrders))
+
+            # Run the CrossSolution algorithm to get all crossed solutions and add them to the neighborhoodSolutionList
+            neighborhoodSolutionList.extend(self.getCrossSolutions(neighborhoodOrder, maximumLengthDelta, insertChargingOrders))
+
+        # Return the neighborhoodSolutionList
+        return neighborhoodSolutionList
+
+    ################################################################################
+    ####################### NEIGHBORHOOD ALGORITHM FUNCTIONS #######################
     ################################################################################
 
     def getTwoOptSolutions(self, drone: Drone, maximumLengthDelta: float = 0, insertChargingOrders: bool = False) -> list[Self]:
