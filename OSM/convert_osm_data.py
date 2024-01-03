@@ -112,9 +112,36 @@ def main():
 
 
     print(f'---------------------------------------------------------------------------------------------------------------')
-    relocateSol = twoOptSol
+    stage2Solution = twoOptSol
 
-    
+    beforeStage2Sum = sum(stage2Solution.getDroneTourDistance(drone) for drone in stage2Solution.getDroneList())
+    beforeStage2Score = stage2Solution.getTimeScore()
+
+    print(f'Pre Stage2 tour sum distance of {beforeStage2Sum} m with a time score of {beforeStage2Score} sec')
+
+    start = time.time()
+    iterations = 0
+
+    while True:
+        iterations += 1
+        betterSolution = min(stage2Solution.getNeighborhoodSolutions(1000, False), key = lambda x: x.getTimeScore(), default = stage2Solution)
+        if betterSolution.getTimeScore() >= stage2Solution.getTimeScore(): break
+        stage2Solution = betterSolution
+
+    for drone in stage2Solution.getDroneList():
+        print(f'Insert Charging order into Staeg2Solution for drone {drone}')
+        if not stage2Solution.insertChargingOrders(drone): print(f'Corrupt Solution found ...')
+
+    end = time.time()
+
+    afterStage2Sum = sum(stage2Solution.getDroneTourDistance(drone) for drone in stage2Solution.getDroneList())
+    afterStage2Score = stage2Solution.getTimeScore()
+
+    print(f'Calcualte the Staeg2Solutions in {(end - start) * 1000} ms with {iterations} iterations')
+    print(f'Tour sum distance changed from {beforeStage2Sum} m to {afterStage2Sum} m (Delta: {afterStage2Sum - beforeStage2Sum} m)')
+    print(f'Time score changed from {beforeStage2Score} sec to {afterStage2Score} sec (Delta: {afterStage2Score - beforeStage2Score} sec)')
+
+
     print(f'---------------------------------------------------------------------------------------------------------------')
     relocateSol = twoOptSol
 
@@ -170,8 +197,11 @@ def main():
     print(f'---------------------------------------------------------------------------------------------------------------')
     crossSol = exchangeSol
     
+
     beforeCrossSum = sum(crossSol.getDroneTourDistance(drone) for drone in crossSol.getDroneList())
-    print(f'Pre Cross tour sum distance of {beforeCrossSum} m')
+    beforeCrossScore = crossSol.getTimeScore()
+
+    print(f'Pre Cross tour sum distance of {beforeCrossSum} m with a time score of {beforeCrossScore} sec')
 
     start = time.time()
     iterations = 0
@@ -192,10 +222,15 @@ def main():
     end = time.time()
 
     afterCrossSum = sum(crossSol.getDroneTourDistance(drone) for drone in crossSol.getDroneList())
-    print(f'Calcualte the CrossSolutions in {(end - start) * 1000} ms with {iterations} iterations and tour sum distance from {beforeCrossSum} m to {afterCrossSum} m (Delta: {afterCrossSum - beforeCrossSum} m)')
+    afterCrossScore = crossSol.getTimeScore()
+
+    print(f'Calcualte the CrossSolutions in {(end - start) * 1000} ms with {iterations} iterations')
+    print(f'Tour sum distance changed from {beforeCrossSum} m to {afterCrossSum} m (Delta: {afterCrossSum - beforeCrossSum} m)')
+    print(f'Time score changed from {beforeCrossScore} sec to {afterCrossScore} sec (Delta: {afterCrossScore - beforeCrossScore} sec)')
 
     print(f'---------------------------------------------------------------------------------------------------------------')
-    return 0
+
+    
     for drone, orders in exchangeSol.getSolutionMatrix().items():
         print(f'-> Drone (milageAvailable={drone.getRemainingFlightDistance()}, tourDistance={exchangeSol.getDroneTourDistance(drone)})')
         for order in orders:
@@ -279,6 +314,18 @@ def main():
     droneFlightFeatureList = []
 
     for drone, orders in crossSol.getSolutionMatrix().items():
+        droneFlightFeatureList.append(Feature(geometry=LineString(list(map(lambda x: x.getDestination().getCoordinates()[::-1], orders))), properties={ 'stroke': colorList[droneList.index(drone)], 'stroke-width': '3', 'stroke-opacity': 1 }))
+
+    featureCollection = FeatureCollection([depotFeature] + chargingStationFeatureList + orderFeatureList + droneFlightFeatureList)
+
+    print(featureCollection)
+
+    print(f'---------------------------------------------------------------------------------------------------------------')
+
+    # Print Stage2 Solution
+    droneFlightFeatureList = []
+
+    for drone, orders in stage2Solution.getSolutionMatrix().items():
         droneFlightFeatureList.append(Feature(geometry=LineString(list(map(lambda x: x.getDestination().getCoordinates()[::-1], orders))), properties={ 'stroke': colorList[droneList.index(drone)], 'stroke-width': '3', 'stroke-opacity': 1 }))
 
     featureCollection = FeatureCollection([depotFeature] + chargingStationFeatureList + orderFeatureList + droneFlightFeatureList)

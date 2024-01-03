@@ -1,3 +1,5 @@
+import random 
+
 from simulation.Drone import Drone
 from simulation.Order import Order
 
@@ -65,6 +67,53 @@ class Solver():
 
         # Return the solution
         return solution
+    
+    def getStageTwoSolution(self, initialSolution: Solution, allowRecharge: bool = True) -> Solution:
+        return None
+    
+    ################################################################################
+    ########################## IMPROVEMENT METHOD FUNCTIONS ########################
+    ################################################################################
+
+    def performRandomWalk(self, currentSolution: Solution, maxIterationsOverall: int, maxIterationsWithoutImprovement: int) -> Solution|None:
+        # Set the current solution as the best solution
+        bestSolution = currentSolution
+        
+        # Initialize the algorithm counters
+        iterationsWithoutImprovement = 0
+        currentIteration = 0
+
+        # Run the algorithm until the termination criteria are fulfilled
+        while True:
+            # Increase the algorithm counter
+            iterationsWithoutImprovement += 1
+            currentIteration += 1
+            
+            # Check if the number of iterations exceeds the limit
+            if currentIteration > maxIterationsOverall: break
+
+            # Check if the number of iterations withouth improvements exceedes the limit
+            if iterationsWithoutImprovement > maxIterationsWithoutImprovement: break
+
+            # Randomly select a neighborhood solution for the current solutions neighborhood list
+            neighborhoodSolution = random.choice(currentSolution.getNeighborhoodSolutions())
+
+            # Check if the neighborhood solution has better time score the the best solution 
+            if (neighborhoodSolution.getTimeScore() < bestSolution.getTimeScore()):
+                # Replace the best solution with the neighborhood solution
+                bestSolution = neighborhoodSolution
+
+                # Reset the iterationsWithoutImprovement counter
+                iterationsWithoutImprovement = 0
+
+            # Replace the current solution with the neighborhood solution
+            currentSolution = neighborhoodSolution
+
+        # Return the best solution
+        return bestSolution
+    
+    
+
 
     ################################################################################
     ############################ STATIC SOLVER FUNCTIONS ###########################

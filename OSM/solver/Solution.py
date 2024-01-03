@@ -95,7 +95,7 @@ class Solution():
         avgDroneTourTime = (sum(droneTourTimeList) / len(droneTourTimeList))
         
         # Sum up the drone tour time and scale the score by the difference between the min/max and avg drone tour time
-        return sum(droneTourTimeList) * (1 + ((max(droneTourTimeList) - min(droneTourTimeList)) / avgDroneTourTime) / 2)
+        return round(sum(droneTourTimeList) * (1 + ((max(droneTourTimeList) - min(droneTourTimeList)) / avgDroneTourTime) / 2), 2)
 
     ################################################################################
     ####################### NEIGHBORHOOD SOLUTION FUNCTIONS ########################
