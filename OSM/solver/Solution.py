@@ -13,7 +13,7 @@ class Solution():
     FLOAT_POSITIVE_INFINITY = float('+inf')
     FLOAT_NEGATIVE_INFINITY = float('-inf')
 
-    # Constructor the order with a given arguemnts
+    # Constructor the solution with given arguemnts
     def __init__(self, droneList: list[Drone], depot: Depot, chargingStationList: list[ChargingStation], orderList: list[Order]):
         # Save the list of drones
         self.droneList = droneList

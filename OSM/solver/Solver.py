@@ -1,4 +1,5 @@
-import random 
+import math
+import random
 
 from simulation.Drone import Drone
 from simulation.Order import Order
@@ -11,7 +12,11 @@ from .ExitCode import ExitCode
 from .Solution import Solution
 
 class Solver():
-    # Constructor the order with a given arguemnts
+    # Define constants for the solver class
+    FLOAT_POSITIVE_INFINITY = float('+inf')
+    FLOAT_NEGATIVE_INFINITY = float('-inf')
+
+    # Constructor the solver with given arguemnts
     def __init__(self, droneList: list[Drone], depot: Depot, chargingStationList: list[ChargingStation], orderList: list[Order]):
         # Save the list of drones
         self.droneList = droneList
@@ -75,11 +80,11 @@ class Solver():
     ########################## IMPROVEMENT METHOD FUNCTIONS ########################
     ################################################################################
 
-    def performRandomWalk(self, currentSolution: Solution, maxIterationsOverall: int, maxIterationsWithoutImprovement: int) -> Solution|None:
+    def performRandomWalk(self, currentSolution: Solution, maxIterationsOverall: int, maxIterationsWithoutImprovement: int) -> Solution:
         # Set the current solution as the best solution
         bestSolution = currentSolution
         
-        # Initialize the algorithm counters
+        # Initialize the RandomWalk algorithm parameters
         iterationsWithoutImprovement = 0
         currentIteration = 0
 
@@ -95,7 +100,7 @@ class Solver():
             # Check if the number of iterations withouth improvements exceedes the limit
             if iterationsWithoutImprovement > maxIterationsWithoutImprovement: break
 
-            # Randomly select a neighborhood solution for the current solutions neighborhood list
+            # Randomly select a neighborhood solution from the current solutions neighborhood list
             neighborhoodSolution = random.choice(currentSolution.getNeighborhoodSolutions())
 
             # Check if the neighborhood solution has better time score the the best solution 
@@ -112,8 +117,139 @@ class Solver():
         # Return the best solution
         return bestSolution
     
-    
+    def performThresholdAccepting(self, currentSolution: Solution, alphaFactor: float = 0.75, sizeFactor: int = 2, minimumThreshold: float = 15, initialThreshold: float = 3600) -> Solution:
+        # Set the current solution as the best solution
+        bestSolution = currentSolution
 
+        # Initialize the ThresholdAccepting algorithm parameters
+        maxIterations = sizeFactor * len(currentSolution.getOrderList())
+        threshold = initialThreshold
+        currentIteration = 0
+
+        # Run the algorithm until the termination criteria are fulfilled
+        while True:
+            # Increase the algorithm counter
+            currentIteration += 1
+
+            # Select the best neighborhood solution from the current solutions neighborhood list
+            neighborhoodSolution = min(currentSolution.getNeighborhoodSolutions(), key=lambda x: x.getTimeScore())
+            
+            # Check if the neighborhood solution has better time score the the best solution 
+            if (neighborhoodSolution.getTimeScore() < bestSolution.getTimeScore()):
+                # Replace the best solution with the neighborhood solution
+                bestSolution = neighborhoodSolution
+            
+            # Check if the delta between neighborhood and current solution time score is lower then the threshold
+            if (neighborhoodSolution.getTimeScore() - currentSolution.getTimeScore()) < threshold:
+                # Replace the current solution with the neighborhood solution
+                currentSolution = neighborhoodSolution
+
+            # Check if the threshold exceeds the limit and the neighborhood solution is worse then the current solution
+            if threshold < minimumThreshold and currentSolution.getTimeScore() <= neighborhoodSolution.getTimeScore(): break
+
+            # Check if the number of iterations exceeds the limit
+            if currentIteration > maxIterations:
+                # Reset the iterations counter
+                currentIteration = 0
+
+                # Recalculate the threshold
+                threshold *= alphaFactor
+
+        # Return the best solution
+        return bestSolution
+
+    def performSimulatedAnnealing(self, currentSolution: Solution, alphaFactor: float = 0.95, betaFactor: float = 1.15, sizeFactor: int = 16, initialAcceptanceRate: float = 30.0, frozenAcceptanceFraction: float = 0.1, frozenParameter: int = 5) -> Solution:
+        # Set the current solution as the best solution
+        bestSolution = currentSolution
+
+        # Initialize the SimulatedAnnealing algorithm parameters
+        maxIterations = sizeFactor * len(currentSolution.getOrderList())
+        temperature = initialAcceptanceRate
+        currentIteration = 0
+
+        # Run the algorithm until the termination criteria are fulfilled
+        while True:
+            # Increase the algorithm counter
+            currentIteration += 1
+
+            # Check if the temperature exceeds the frozenAcceptanceFraction and the current iteration the frozenParameter
+            if temperature < frozenAcceptanceFraction and currentIteration > frozenParameter: break
+
+            # Randomly select a neighborhood solution from the current solutions neighborhood list
+            neighborhoodSolution = random.choice(currentSolution.getNeighborhoodSolutions())
+
+            # Check if the neighborhood solution has better time score the the best solution 
+            if (neighborhoodSolution.getTimeScore() < bestSolution.getTimeScore()):
+                # Replace the best solution with the neighborhood solution
+                bestSolution = neighborhoodSolution
+
+            # Check if the neighborhood solution has better time score the the current solution 
+            if (neighborhoodSolution.getTimeScore() < currentSolution.getTimeScore()):
+                # Replace the current solution with the neighborhood solution
+                currentSolution = neighborhoodSolution
+            
+            # Check if the acceptance probability is greater then a random uniform number
+            elif random.uniform(0, 1) < math.exp((currentSolution.getTimeScore() - neighborhoodSolution.getTimeScore()) / temperature):
+                currentSolution = neighborhoodSolution
+
+            # Check if the number of iterations exceeds the limit
+            if currentIteration > maxIterations:
+                # Recalculate the maxIterations
+                maxIterations *= betaFactor
+
+                # Recalculate the temperature
+                temperature *= alphaFactor
+
+        # Return the best solution
+        return bestSolution
+    
+    def performReactiveTabuSearch(self, currentSolution: Solution, initialTabuListLength: int = 10, minTabuListLength: int = 5, maxTabuListLength: int = 5000, deltaOne: float = 1.2, deltaTwo: float = 2, maxIterationsOverall: int = 5000, maxIterationsWithoutImprovement: int = 5000, iterationsForListShortening: int = 10) -> Solution:
+        # Set the current solution as the best solution
+        bestSolution = currentSolution
+
+        # Initialize the ReactiveTabuSearch algorithm parameters
+        iterationsWithoutRepetition = 0
+        iterationsWithoutImprovement = 0
+        tabuList = [currentSolution]
+        currentIteration = 0
+
+        # Run the algorithm until the termination criteria are fulfilled
+        while True:
+            # Increase the algorithm counter
+            iterationsWithoutImprovement += 1
+            currentIteration += 1
+
+            # Check if the number of iterations exceeds the limit
+            if currentIteration > maxIterationsOverall: break
+
+            # Check if the number of iterations withouth improvements exceedes the limit
+            if iterationsWithoutImprovement > maxIterationsWithoutImprovement: break
+            
+            # Save the best neighborhood solution score outside the loop
+            bestNeighborhoodSolution = None
+
+            # Loop through the current solutions neighborhood list to evalute them
+            for neighborhoodSolution in currentSolution.getNeighborhoodSolutions():
+                # Check if the neighborhood solution has better time score the the best solution 
+                if (neighborhoodSolution.getTimeScore() < bestSolution.getTimeScore()):
+                    # Replace the best solution with the neighborhood solution
+                    bestSolution = neighborhoodSolution
+
+                    # Replace the current best neighborhood solution
+                    bestNeighborhoodSolution = neighborhoodSolution
+
+                    # Reset the iterationsWithoutImprovement counter
+                    iterationsWithoutImprovement = 0
+
+                elif tabuList
+
+
+
+            # Add s* to tabu list T
+            # Set currentSolution = s*
+                
+        # Return the best solution
+        return bestSolution
 
     ################################################################################
     ############################ STATIC SOLVER FUNCTIONS ###########################
