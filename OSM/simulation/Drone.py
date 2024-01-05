@@ -1,12 +1,19 @@
 class Drone():
-    # Define the number of seconds per hour
+    # Define constants for the drone class
     SECONDS_PER_HOUR_FACTOR = 3600
-
-    # Define the kilo factor
     KILO_FACTOR = 1000
+
+    # Define static parameter for the drone class
+    droneInstanceCounter = 0
 
     # Constructor the drone with a given arguemnts
     def __init__(self, tareWeight: int, batterySize: float, loadingCapacity: int, initialBatteryCharge: float = None, powerPerKilogram: int = 150, maxSpeed: int = 10, batteryReserve: float = 0.1):
+        # Increment the drone instance counter
+        Drone.droneInstanceCounter += 1
+        
+        # Set the drone instance count as the unique drone id 
+        self.id = Drone.droneInstanceCounter
+        
         # Check if the tareWeight is a positive integer and if not raise a ValueError
         if (tareWeight <= 0): raise ValueError('Invalid non-positive drone weight.')
 
@@ -46,6 +53,10 @@ class Drone():
     ############################### GETTER FUNCTIONS ###############################
     ################################################################################
 
+    # Getter function for the drone id [int]
+    def getId(self) -> int:
+        return self.id
+
     # Getter function for the tare weight [g]
     def getTareWeight(self) -> int:
         return self.tareWeight 
@@ -84,11 +95,11 @@ class Drone():
 
     # Calculate the remaining flight time [s]
     def getRemainingFlightTime(self) -> float:
-        return (self.getCurrentBatteryCharge() / (((self.tareWeight + self.loadingCapacity) / self.KILO_FACTOR) * self.powerPerKilogram))
+        return (self.getCurrentBatteryCharge() / (((self.tareWeight + self.loadingCapacity) / Drone.KILO_FACTOR) * self.powerPerKilogram))
     
     # Calculate the remaining flight distance [m]
     def getRemainingFlightDistance(self) -> float:
-        return self.maxSpeed * self.getRemainingFlightTime() * self.SECONDS_PER_HOUR_FACTOR
+        return self.maxSpeed * self.getRemainingFlightTime() * Drone.SECONDS_PER_HOUR_FACTOR
     
     # Calculate the flight time for a given distance in meters [s]
     def calculateFlightTime(self, distance: float) -> float:

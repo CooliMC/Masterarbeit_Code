@@ -1,6 +1,8 @@
 import math
 import random
 
+from collections import deque
+
 from simulation.Drone import Drone
 from simulation.Order import Order
 
@@ -208,9 +210,10 @@ class Solver():
         bestSolution = currentSolution
 
         # Initialize the ReactiveTabuSearch algorithm parameters
+        tabuList = deque([currentSolution], initialTabuListLength)
+        longTermMemory = set([currentSolution])
         iterationsWithoutRepetition = 0
         iterationsWithoutImprovement = 0
-        tabuList = [currentSolution]
         currentIteration = 0
 
         # Run the algorithm until the termination criteria are fulfilled
@@ -225,28 +228,109 @@ class Solver():
             # Check if the number of iterations withouth improvements exceedes the limit
             if iterationsWithoutImprovement > maxIterationsWithoutImprovement: break
             
-            # Save the best neighborhood solution score outside the loop
-            bestNeighborhoodSolution = None
+            # Resolve all neighborhood solutions of the current solution
+            neighborhoodSolutionList = currentSolution.getNeighborhoodSolutions()
 
-            # Loop through the current solutions neighborhood list to evalute them
-            for neighborhoodSolution in currentSolution.getNeighborhoodSolutions():
-                # Check if the neighborhood solution has better time score the the best solution 
-                if (neighborhoodSolution.getTimeScore() < bestSolution.getTimeScore()):
-                    # Replace the best solution with the neighborhood solution
-                    bestSolution = neighborhoodSolution
+            # Inizialize the NeighborhoodSearch parameters
+            bestNotAllowedNeighborhoodSolution = None
+            bestAllowedNeighborhoodSolution = None
+            foundAlreadySeenSolution = 0
 
-                    # Replace the current best neighborhood solution
-                    bestNeighborhoodSolution = neighborhoodSolution
+            # Loop over the neighborhoodSolutionList to check each entry
+            for neighborhoodSolution in neighborhoodSolutionList:
+                # Create a TabuKey for the neighborhoodSolution
+                neighborhoodSolutionKey = TabuKey(neighborhoodSolution)
 
-                    # Reset the iterationsWithoutImprovement counter
-                    iterationsWithoutImprovement = 0
+                # Check neighborhoodSolutionKey against the longTermMemory
+                if neighborhoodSolutionKey in longTermMemory:
+                    # Increase the foundAlreadySeenSolution
+                    foundAlreadySeenSolution += 1
 
-                elif tabuList
+                # Check if the neighborhoodSolution is not blocked
+                if neighborhoodSolutionKey not in tabuList:
+                    # Check if the bestAllowedNeighborhoodSolution is set
+                    if bestAllowedNeighborhoodSolution is not None:
+                        # Check the score of the neighborhoodSolution against the bestAllowedNeighborhoodSolution
+                        if neighborhoodSolution.getTimeScore() < bestAllowedNeighborhoodSolution.getTimeScore():
+                            # Set the neighborhoodSolution as the bestAllowedNeighborhoodSolution
+                            bestAllowedNeighborhoodSolution = neighborhoodSolution
+
+                    # Set the neighborhoodSolution as the bestAllowedNeighborhoodSolution
+                    else: bestAllowedNeighborhoodSolution = neighborhoodSolution
 
 
+                # Check if the bestNotAllowedNeighborhoodSolution is set
+                elif bestNotAllowedNeighborhoodSolution is not None:
+                    # Check the score of the neighborhoodSolution against the bestNotAllowedNeighborhoodSolution
+                    if neighborhoodSolution.getTimeScore() < bestNotAllowedNeighborhoodSolution.getTimeScore():
+                        # Set the neighborhoodSolution as the bestNotAllowedNeighborhoodSolution
+                        bestNotAllowedNeighborhoodSolution = neighborhoodSolution
+                
+                # Set the neighborhoodSolution as the bestNotAllowedNeighborhoodSolution
+                else: bestNotAllowedNeighborhoodSolution = neighborhoodSolution
 
-            # Add s* to tabu list T
-            # Set currentSolution = s*
+            # Get the best neighborhood solution that is allowed, otherwise the best not allowed one
+            currentSolution = bestAllowedNeighborhoodSolution or bestNotAllowedNeighborhoodSolution
+
+            # Blocke Best Moves
+            currentSolutionTabuKey = TabuKey(currentSolution)
+
+            # Check if there were already seen solutions
+            if foundAlreadySeenSolution > 0:
+                # Hint: Increase tabu list length because we saw an already seen solution
+                # Resolve the current max tabu list length (with fallback if None)
+                targetTabuListLength = tabuList.maxlen or len(tabuList)
+
+                # Check if the targetTabuListLength is smaller then the maxTabuListLength
+                if targetTabuListLength < maxTabuListLength:
+                    # Use the reactive tabu search deltas to calculate the new targetTabuListLength
+                    targetTabuListLength = math.ceil(max(targetTabuListLength * deltaOne, targetTabuListLength + deltaTwo))
+
+                    # Check if the targetTabuListLength exceeds the maxTabuListLength
+                    targetTabuListLength = min(targetTabuListLength, maxTabuListLength)
+
+                    # Replace the tabuList to increase the max list length
+                    tabuList = deque(tabuList, targetTabuListLength)
+
+                # Reset the iterationsWithoutRepetition counter 
+                iterationsWithoutRepetition = 0
+
+            # Check if there were enought iterations without repetitions
+            elif iterationsWithoutRepetition >= iterationsForListShortening:
+                # Hint: Decrease tabu list because we did not see some already seen solutions for a while
+                # Resolve the current max tabu list length (with fallback if None)
+                targetTabuListLength = tabuList.maxlen or len(tabuList)
+
+                 # Check if the targetTabuListLength is greater then the minTabuListLength
+                if targetTabuListLength > minTabuListLength:
+                    # Use the reactive tabu search deltas to calculate the new targetTabuListLength
+                    targetTabuListLength = math.ceil(max(targetTabuListLength / deltaOne, targetTabuListLength - deltaTwo))
+
+                    # Check if the targetTabuListLength subceed the minTabuListLength
+                    targetTabuListLength = max(targetTabuListLength, minTabuListLength)
+
+                    # Replace the tabuList to decrease the max list length
+                    tabuList = deque(tabuList, targetTabuListLength)
+
+                # Reset the iterationsWithoutRepetition counter 
+                iterationsWithoutRepetition = 0
+
+            # Increase the iterationsWithoutRepetition counter 
+            else: iterationsWithoutRepetition += 1
+
+            # Add the currentSolutionTabuKey to the tabuList
+            tabuList.append(currentSolutionTabuKey)
+
+            # Add the currentSolutionTabuKey to the longTermMemory
+            longTermMemory.add(currentSolutionTabuKey)
+
+            # Check if the current solution solution has better time score the the best solution 
+            if (currentSolution.getTimeScore() < bestSolution.getTimeScore()):
+                # Replace the best solution with the current solution
+                bestSolution = currentSolution
+
+                # Reset the iterationsWithoutImprovement counter
+                iterationsWithoutImprovement = 0
                 
         # Return the best solution
         return bestSolution
@@ -384,3 +468,78 @@ class Solver():
 
         # Return the last given constrainFailureLevel exit code
         return constrainFailureLevel
+    
+################################################################################
+################################ SUPPORT CLASSES ###############################
+################################################################################
+
+class TabuKey():
+    # Constructor the tabu key with given arguemnts
+    def __init__(self, solution: Solution):
+        # Save the drone list for equality checks
+        self.droneList = solution.getDroneList()
+
+        # Save the drone order dict as the unique parameter
+        self.droneOrders = solution.getSolutionMatrix()
+
+    ################################################################################
+    ################################ CLASS FUNCTIONS ###############################
+    ################################################################################
+
+    def __eq__(self, other):
+        # Check if the have the same reference
+        if self is other: return True
+
+        # Check if the are the same class instance
+        if not isinstance(other, TabuKey): return False
+
+        # Check if the drone orders are initialized in both tabu keys
+        if self.droneOrders is None or other.droneOrders is None: return False
+
+        # Check if the drone orders have the same reference
+        if self.droneOrders is other.droneOrders: return True
+
+        # Check if the drone orders have the same keys and key values
+        if self.droneOrders == other.droneOrders: return True
+
+        # Check if the length of the drone orders is equal
+        if len(self.droneOrders) != len(other.droneOrders): return False
+
+        # Check if the length of the drone list is equal
+        if len(self.droneList) != len(other.droneList): return False
+
+        # Loop through the list of drones to compare the 
+        for drone in self.droneList:
+            # Check if the drone orders are equal in size, content and order
+            if self.droneOrders[drone] == other.droneOrders[drone]: continue
+            
+            # Check fi the drone orders have the same size before in depth comparison
+            if len(self.droneOrders[drone]) != len(other.droneOrders[drone]): return False
+
+            # Iterate over the list of the drone in both tabu keys by index
+            for droneOrderIndex in range(len(self.droneOrders[drone])):
+                # Check if the order id of the current drone order index is equal in this and the other tabu key
+                if self.droneOrders[drone][droneOrderIndex].getId() != other.droneOrders[drone][droneOrderIndex].getId():
+                    # Not equal so return False
+                    return False
+
+        # Default to True
+        return True
+    
+    def __hash__(self):
+        # Initialize the result hash
+        resultHash = 1
+
+        # Loop over the droneOrderDict for the drone and orderList
+        for drone, orderList in self.droneOrders.items():
+            # Iterate through the orderList of each drone
+            for orderIndex in range(len(orderList)):
+                # Calculate an orderHash with a magic number and the parameters
+                orderHash = 31 * drone.getId() + (orderIndex + 1)
+                orderHash = 31 * orderHash + orderList[orderIndex].getId()
+
+                # Add the position based order hash to the result hash
+                resultHash = (31 * resultHash + orderHash) % 4157396449
+
+        # Return the result hash
+        return resultHash
