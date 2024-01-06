@@ -111,7 +111,7 @@ def main():
     print(f'---------------------------------------------------------------------------------------------------------------')
 
     start = time.time()
-    tabuSearchSolution = solver.performReactiveTabuSearch(localSearchSolution, 50, 5, 50000, 1.2, 2.0, 500, 250, 10)
+    tabuSearchSolution = solver.performReactiveTabuSearch(localSearchSolution, 50, 5, 5000, 1.2, 2.0, 5000, 2500, 10)
     end = time.time()
 
     tabuSearchSolutionTourSum = sum(tabuSearchSolution.getDroneTourDistance(drone) for drone in tabuSearchSolution.getDroneList())

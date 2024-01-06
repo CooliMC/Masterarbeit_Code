@@ -115,6 +115,9 @@ class Solver():
         return bestSolution
 
     def performRandomWalk(self, currentSolution: Solution, maxIterationsOverall: int, maxIterationsWithoutImprovement: int) -> Solution:
+        # Get a copy of the current solution with out charging orders
+        currentSolution = currentSolution.getSolutionCopy(False)
+
         # Set the current solution as the best solution
         bestSolution = currentSolution
         
@@ -148,10 +151,20 @@ class Solver():
             # Replace the current solution with the neighborhood solution
             currentSolution = neighborhoodSolution
 
+        # Loop over the drones to reinsert the charging orders
+        for drone in bestSolution.getDroneList():
+            # Try tp reinsert the charging orders into the drone tour
+            if not bestSolution.insertChargingOrders(drone):
+                # Raise exception cause it is not possible to insert charging
+                raise Exception("Corrupt Solution - Can't insert charging order.")
+
         # Return the best solution
         return bestSolution
     
     def performThresholdAccepting(self, currentSolution: Solution, alphaFactor: float = 0.75, sizeFactor: int = 2, minimumThreshold: float = 15, initialThreshold: float = 3600) -> Solution:
+        # Get a copy of the current solution with out charging orders
+        currentSolution = currentSolution.getSolutionCopy(False)
+
         # Set the current solution as the best solution
         bestSolution = currentSolution
 
@@ -189,10 +202,20 @@ class Solver():
                 # Recalculate the threshold
                 threshold *= alphaFactor
 
+        # Loop over the drones to reinsert the charging orders
+        for drone in bestSolution.getDroneList():
+            # Try tp reinsert the charging orders into the drone tour
+            if not bestSolution.insertChargingOrders(drone):
+                # Raise exception cause it is not possible to insert charging
+                raise Exception("Corrupt Solution - Can't insert charging order.")
+
         # Return the best solution
         return bestSolution
 
     def performSimulatedAnnealing(self, currentSolution: Solution, alphaFactor: float = 0.95, betaFactor: float = 1.15, sizeFactor: int = 16, initialAcceptanceRate: float = 30.0, frozenAcceptanceFraction: float = 0.1, frozenParameter: int = 5) -> Solution:
+        # Get a copy of the current solution with out charging orders
+        currentSolution = currentSolution.getSolutionCopy(False)
+
         # Set the current solution as the best solution
         bestSolution = currentSolution
 
@@ -233,6 +256,13 @@ class Solver():
 
                 # Recalculate the temperature
                 temperature *= alphaFactor
+        
+        # Loop over the drones to reinsert the charging orders
+        for drone in bestSolution.getDroneList():
+            # Try tp reinsert the charging orders into the drone tour
+            if not bestSolution.insertChargingOrders(drone):
+                # Raise exception cause it is not possible to insert charging
+                raise Exception("Corrupt Solution - Can't insert charging order.")
 
         # Return the best solution
         return bestSolution
@@ -264,7 +294,7 @@ class Solver():
             if iterationsWithoutImprovement > maxIterationsWithoutImprovement: break
             
             # Resolve all neighborhood solutions of the current solution
-            neighborhoodSolutionList = currentSolution.getNeighborhoodSolutions(500, False)
+            neighborhoodSolutionList = currentSolution.getNeighborhoodSolutions(250, False)
 
             # Inizialize the NeighborhoodSearch parameters
             bestNotAllowedNeighborhoodSolution = None
@@ -375,6 +405,25 @@ class Solver():
         
         # Return the best solution
         return bestSolution
+    
+
+    def performFullReactivTabuSearch(self, currentSolution: Solution, initialTabuListLength: int = 10, minTabuListLength: int = 5, maxTabuListLength: int = 5000, deltaOne: float = 1.2, deltaTwo: float = 2, maxIterationsOverall: int = 5000, maxIterationsWithoutImprovement: int = 5000, iterationsForListShortening: int = 10) -> Solution:
+        # Get a copy of the current solution with out charging orders
+        currentSolution = currentSolution.getSolutionCopy(False)
+            
+        # Set the current solution as the best solution
+        bestSolution = currentSolution
+
+
+
+
+
+
+
+
+            
+        # Return the best solution
+        return bestSolution    
 
     ################################################################################
     ############################ STATIC SOLVER FUNCTIONS ###########################
@@ -570,7 +619,7 @@ class TabuKey():
     def __hash__(self):
         # Initialize the result hash
         resultHash = 1
-
+        
         # Loop over the droneOrderDict for the drone and orderList
         for drone, orderList in self.droneOrders.items():
             # Iterate through the orderList of each drone
