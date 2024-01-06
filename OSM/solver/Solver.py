@@ -1,5 +1,6 @@
 import math
 import random
+import time
 
 from collections import deque
 
@@ -81,6 +82,37 @@ class Solver():
     ################################################################################
     ########################## IMPROVEMENT METHOD FUNCTIONS ########################
     ################################################################################
+
+    def performLocalSearch(self, currentSolution: Solution) -> Solution:
+        # Get a copy of the current solution with out charging orders
+        currentSolution = currentSolution.getSolutionCopy(False)
+
+        # Set the current solution as the best solution
+        bestSolution = currentSolution
+
+        # Loop through all drones to optimze their tours
+        for drone in bestSolution.getDroneList():
+            # Run the algorithm until the termination criteria are fulfilled
+            while True:
+                # Get the two opt neighborhood solutions list for the current drone (without charging orders)
+                neighborhoodSolutionList = currentSolution.getTwoOptSolutions(drone, 0, False)
+
+                # Select the best neighborhood solution from the current solutions neighborhood list (with a default fallback)
+                currentSolution = min(neighborhoodSolutionList, key=lambda x: x.getDroneTourDistance(drone), default=currentSolution)
+
+                # Check if the current solution has worse distance score the the best solution 
+                if (currentSolution.getDroneTourDistance(drone) >= bestSolution.getDroneTourDistance(drone)): break
+
+                # Replace the best solution with the current solution
+                bestSolution = currentSolution
+
+            # Try tp reinsert the charging orders into the drone tour
+            if not bestSolution.insertChargingOrders(drone):
+                # Raise exception cause it is not possible to insert charging
+                raise Exception("Corrupt Solution - Can't insert charging order.")
+
+        # Return the best solution
+        return bestSolution
 
     def performRandomWalk(self, currentSolution: Solution, maxIterationsOverall: int, maxIterationsWithoutImprovement: int) -> Solution:
         # Set the current solution as the best solution
@@ -206,6 +238,9 @@ class Solver():
         return bestSolution
     
     def performReactiveTabuSearch(self, currentSolution: Solution, initialTabuListLength: int = 10, minTabuListLength: int = 5, maxTabuListLength: int = 5000, deltaOne: float = 1.2, deltaTwo: float = 2, maxIterationsOverall: int = 5000, maxIterationsWithoutImprovement: int = 5000, iterationsForListShortening: int = 10) -> Solution:
+        # Get a copy of the current solution with out charging orders
+        currentSolution = currentSolution.getSolutionCopy(False)
+        
         # Set the current solution as the best solution
         bestSolution = currentSolution
 
@@ -229,13 +264,13 @@ class Solver():
             if iterationsWithoutImprovement > maxIterationsWithoutImprovement: break
             
             # Resolve all neighborhood solutions of the current solution
-            neighborhoodSolutionList = currentSolution.getNeighborhoodSolutions()
+            neighborhoodSolutionList = currentSolution.getNeighborhoodSolutions(500, False)
 
             # Inizialize the NeighborhoodSearch parameters
             bestNotAllowedNeighborhoodSolution = None
             bestAllowedNeighborhoodSolution = None
             foundAlreadySeenSolution = 0
-
+            
             # Loop over the neighborhoodSolutionList to check each entry
             for neighborhoodSolution in neighborhoodSolutionList:
                 # Create a TabuKey for the neighborhoodSolution
@@ -258,7 +293,6 @@ class Solver():
                     # Set the neighborhoodSolution as the bestAllowedNeighborhoodSolution
                     else: bestAllowedNeighborhoodSolution = neighborhoodSolution
 
-
                 # Check if the bestNotAllowedNeighborhoodSolution is set
                 elif bestNotAllowedNeighborhoodSolution is not None:
                     # Check the score of the neighborhoodSolution against the bestNotAllowedNeighborhoodSolution
@@ -280,15 +314,15 @@ class Solver():
                 # Hint: Increase tabu list length because we saw an already seen solution
                 # Resolve the current max tabu list length (with fallback if None)
                 targetTabuListLength = tabuList.maxlen or len(tabuList)
-
+                
                 # Check if the targetTabuListLength is smaller then the maxTabuListLength
                 if targetTabuListLength < maxTabuListLength:
                     # Use the reactive tabu search deltas to calculate the new targetTabuListLength
-                    targetTabuListLength = math.ceil(max(targetTabuListLength * deltaOne, targetTabuListLength + deltaTwo))
+                    targetTabuListLength = max(math.ceil(targetTabuListLength * deltaOne), targetTabuListLength + deltaTwo)
 
                     # Check if the targetTabuListLength exceeds the maxTabuListLength
                     targetTabuListLength = min(targetTabuListLength, maxTabuListLength)
-
+                    
                     # Replace the tabuList to increase the max list length
                     tabuList = deque(tabuList, targetTabuListLength)
 
@@ -304,11 +338,11 @@ class Solver():
                  # Check if the targetTabuListLength is greater then the minTabuListLength
                 if targetTabuListLength > minTabuListLength:
                     # Use the reactive tabu search deltas to calculate the new targetTabuListLength
-                    targetTabuListLength = math.ceil(max(targetTabuListLength / deltaOne, targetTabuListLength - deltaTwo))
+                    targetTabuListLength = min(math.ceil(targetTabuListLength / deltaOne), targetTabuListLength - deltaTwo)
 
                     # Check if the targetTabuListLength subceed the minTabuListLength
                     targetTabuListLength = max(targetTabuListLength, minTabuListLength)
-
+                    
                     # Replace the tabuList to decrease the max list length
                     tabuList = deque(tabuList, targetTabuListLength)
 
@@ -328,10 +362,17 @@ class Solver():
             if (currentSolution.getTimeScore() < bestSolution.getTimeScore()):
                 # Replace the best solution with the current solution
                 bestSolution = currentSolution
-
+                
                 # Reset the iterationsWithoutImprovement counter
                 iterationsWithoutImprovement = 0
-                
+        
+        # Loop over the drones to reinsert the charging orders
+        for drone in bestSolution.getDroneList():
+            # Try tp reinsert the charging orders into the drone tour
+            if not bestSolution.insertChargingOrders(drone):
+                # Raise exception cause it is not possible to insert charging
+                raise Exception("Corrupt Solution - Can't insert charging order.")
+        
         # Return the best solution
         return bestSolution
 

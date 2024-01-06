@@ -21,8 +21,8 @@ class Solution():
         # Save the depot
         self.depot = depot
 
-        # Save the list of charging stations
-        self.chargingStationList = chargingStationList
+        # Save the list of charging stations as a set
+        self.chargingStationList = set(chargingStationList)
 
         # Save the list of orders
         self.orderList = orderList
@@ -113,6 +113,15 @@ class Solution():
             # Run the ExchangeSolution algorithm to get all swapped solutions and add them to the neighborhoodSolutionList
             neighborhoodSolutionList.extend(self.getExchangeSolutions(neighborhoodOrder, maximumLengthDelta, insertChargingOrders))
 
+        # Return the neighborhoodSolutionList
+        return neighborhoodSolutionList
+    
+    def getExtendedNeighborhoodSolutions(self, maximumLengthDelta: float = FLOAT_POSITIVE_INFINITY, insertChargingOrders: bool = False) -> list[Self]:
+        # Create an prefilled solution list for the neighborhood by using the simple neighborhood function
+        neighborhoodSolutionList = self.getNeighborhoodSolutions(maximumLengthDelta, insertChargingOrders)
+
+        # Loop through the order list to calculate the neighborhood for each order
+        for neighborhoodOrder in self.orderList:
             # Run the CrossSolution algorithm to get all crossed solutions and add them to the neighborhoodSolutionList
             neighborhoodSolutionList.extend(self.getCrossSolutions(neighborhoodOrder, maximumLengthDelta, insertChargingOrders))
 
@@ -577,11 +586,12 @@ class Solution():
 
         # Create a shallow copy of the solution matrix with dict function
         solutionCopy.solutionMatrix = dict(solutionCopy.solutionMatrix)
-        # TODO: Check and remove charging orders if set
+        
         # Loop over the shallow copy of the solution matrix
         for drone, orderList in solutionCopy.solutionMatrix.items():
-            # Create a shallow copy of the orderList with the list function
-            solutionCopy.solutionMatrix[drone] = list(orderList)
+            # Create a shallow copy and filter the charging orders from the list if necesarry
+            solutionCopy.solutionMatrix[drone] = list(orderList if includeChargingOrders else
+                [order for order in orderList if order not in self.chargingStationList])
 
         # Return the solution copy
         return solutionCopy

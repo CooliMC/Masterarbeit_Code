@@ -82,157 +82,63 @@ def main():
 
     solver = Solver(droneList, depot, simulation.getChargingStationList(), orderList)
 
-    
-    initalSol = solver.getInitialSolution()
-    twoOptSol = initalSol
-
-    # Solution output
-    print(f'InitialSolution:')
-    for drone, orders in initalSol.getSolutionMatrix().items():
-        print(f'-> Drone (milageAvailable={drone.getRemainingFlightDistance()}, tourDistance={initalSol.getDroneTourDistance(drone)})')
-        for order in orders:
-            print(f'---> Order (destination={order.getDestination()})')
-    
     print(f'---------------------------------------------------------------------------------------------------------------')
-
-    for drone in twoOptSol.getDroneList():
-        print(f'Initial Drone tour distance: of {twoOptSol.getDroneTourDistance(drone)} m')
-
-        start = time.time()
-        iterations = 0
-        while True:
-            iterations += 1
-            betterSolution = min(twoOptSol.getTwoOptSolutions(drone), key = lambda x: x.getDroneTourDistance(drone), default = twoOptSol)
-            if betterSolution.getDroneTourDistance(drone) >= twoOptSol.getDroneTourDistance(drone): break
-            twoOptSol = betterSolution
-        if not twoOptSol.insertChargingOrders(drone): print(f'Corrupt Solution found ...')
-        end = time.time()
-
-        print(f'Calcualte the TwoOptSolutions in {(end - start) * 1000} ms with {iterations} iterations and tour distance of {twoOptSol.getDroneTourDistance(drone)} m')
-
-
-    print(f'---------------------------------------------------------------------------------------------------------------')
-    stage2Solution = twoOptSol
-
-    beforeStage2Sum = sum(stage2Solution.getDroneTourDistance(drone) for drone in stage2Solution.getDroneList())
-    beforeStage2Score = stage2Solution.getTimeScore()
-
-    print(f'Pre Stage2 tour sum distance of {beforeStage2Sum} m with a time score of {beforeStage2Score} sec')
 
     start = time.time()
-    iterations = 0
-
-    while True:
-        iterations += 1
-        betterSolution = min(stage2Solution.getNeighborhoodSolutions(1000, False), key = lambda x: x.getTimeScore(), default = stage2Solution)
-        if betterSolution.getTimeScore() >= stage2Solution.getTimeScore(): break
-        stage2Solution = betterSolution
-
-    for drone in stage2Solution.getDroneList():
-        print(f'Insert Charging order into Staeg2Solution for drone {drone}')
-        if not stage2Solution.insertChargingOrders(drone): print(f'Corrupt Solution found ...')
-
+    initalSolution = solver.getInitialSolution()
     end = time.time()
 
-    afterStage2Sum = sum(stage2Solution.getDroneTourDistance(drone) for drone in stage2Solution.getDroneList())
-    afterStage2Score = stage2Solution.getTimeScore()
+    initalSolutionTourSum = sum(initalSolution.getDroneTourDistance(drone) for drone in initalSolution.getDroneList())
+    initalSolutionTimeScore = initalSolution.getTimeScore()
 
-    print(f'Calcualte the Staeg2Solutions in {(end - start) * 1000} ms with {iterations} iterations')
-    print(f'Tour sum distance changed from {beforeStage2Sum} m to {afterStage2Sum} m (Delta: {afterStage2Sum - beforeStage2Sum} m)')
-    print(f'Time score changed from {beforeStage2Score} sec to {afterStage2Score} sec (Delta: {afterStage2Score - beforeStage2Score} sec)')
-
+    print(f'Calcualte the InitialSolution in {(end - start) * 1000} ms')
+    print(f'Tour sum distance is {initalSolutionTourSum} m')
+    print(f'Time score is {initalSolutionTimeScore} sec')
 
     print(f'---------------------------------------------------------------------------------------------------------------')
-    relocateSol = twoOptSol
-
-    beforeRelocateSum = sum(relocateSol.getDroneTourDistance(drone) for drone in relocateSol.getDroneList())
-    print(f'Pre Relocate tour sum distance of {beforeRelocateSum} m')
 
     start = time.time()
-    iterations = 0
-
-    for order in relocateSol.getOrderList():
-        print(f'Calculating RelocateSolutions for Order {order}')
-        while True:
-            iterations += 1
-            betterSolution = min(relocateSol.getRelocateSolutions(order, 0), key = lambda x: sum(x.getDroneTourDistance(y) for y in x.getDroneList()), default = relocateSol)
-            if sum(betterSolution.getDroneTourDistance(y) for y in betterSolution.getDroneList()) >= sum(relocateSol.getDroneTourDistance(y) for y in relocateSol.getDroneList()): break
-            relocateSol = betterSolution
-
-    for drone in relocateSol.getDroneList():
-        print(f'Insert Charging order into RelocateSolution fro drone {drone}')
-        if not relocateSol.insertChargingOrders(drone): print(f'Corrupt Solution found ...')
-    
+    localSearchSolution = solver.performLocalSearch(initalSolution)
     end = time.time()
 
-    afterRelocateSum = sum(relocateSol.getDroneTourDistance(drone) for drone in relocateSol.getDroneList())
-    print(f'Calcualte the RelocateSolutions in {(end - start) * 1000} ms with {iterations} iterations and tour sum distance from {beforeRelocateSum} m to {afterRelocateSum} m (Delta: {afterRelocateSum - beforeRelocateSum} m)')
+    localSearchSolutionTourSum = sum(localSearchSolution.getDroneTourDistance(drone) for drone in localSearchSolution.getDroneList())
+    localSearchSolutionTimeScore = localSearchSolution.getTimeScore()
+
+    print(f'Calcualte the LocalSearch in {(end - start) * 1000} ms')
+    print(f'Tour sum distance changed from {initalSolutionTourSum} m to {localSearchSolutionTourSum} m (Delta: {localSearchSolutionTourSum - initalSolutionTourSum} m)')
+    print(f'Time score changed from {initalSolutionTimeScore} sec to {localSearchSolutionTimeScore} sec (Delta: {localSearchSolutionTimeScore - initalSolutionTimeScore} sec)')
 
     print(f'---------------------------------------------------------------------------------------------------------------')
-    exchangeSol = relocateSol
-    
-    beforeExchangeSum = sum(exchangeSol.getDroneTourDistance(drone) for drone in exchangeSol.getDroneList())
-    print(f'Pre Exchange tour sum distance of {beforeExchangeSum} m')
 
     start = time.time()
-    iterations = 0
-
-    for order in exchangeSol.getOrderList():
-        print(f'Calculating ExchangeSolutions for Order {order}')
-        while True:
-            iterations += 1
-            betterSolution = min(exchangeSol.getExchangeSolutions(order, 0), key = lambda x: sum(x.getDroneTourDistance(y) for y in x.getDroneList()), default = exchangeSol)
-            if sum(betterSolution.getDroneTourDistance(y) for y in betterSolution.getDroneList()) >= sum(exchangeSol.getDroneTourDistance(y) for y in exchangeSol.getDroneList()): break
-            exchangeSol = betterSolution
-
-    for drone in exchangeSol.getDroneList():
-        print(f'Insert Charging order into ExchangeSolution fro drone {drone}')
-        if not exchangeSol.insertChargingOrders(drone): print(f'Corrupt Solution found ...')
-    
+    tabuSearchSolution = solver.performReactiveTabuSearch(localSearchSolution, 50, 5, 50000, 1.2, 2.0, 500, 250, 10)
     end = time.time()
 
-    afterExchangeSum = sum(exchangeSol.getDroneTourDistance(drone) for drone in exchangeSol.getDroneList())
-    print(f'Calcualte the ExchangeSolutions in {(end - start) * 1000} ms with {iterations} iterations and tour sum distance from {beforeExchangeSum} m to {afterExchangeSum} m (Delta: {afterExchangeSum - beforeExchangeSum} m)')
+    tabuSearchSolutionTourSum = sum(tabuSearchSolution.getDroneTourDistance(drone) for drone in tabuSearchSolution.getDroneList())
+    tabuSearchSolutionTimeScore = tabuSearchSolution.getTimeScore()
+
+    print(f'Calcualte the TabuSearchSolutions in {(end - start) * 1000} ms')
+    print(f'Tour sum distance changed from {localSearchSolutionTourSum} m to {tabuSearchSolutionTourSum} m (Delta: {tabuSearchSolutionTourSum - localSearchSolutionTourSum} m)')
+    print(f'Time score changed from {localSearchSolutionTimeScore} sec to {tabuSearchSolutionTimeScore} sec (Delta: {tabuSearchSolutionTimeScore - localSearchSolutionTimeScore} sec)')
 
     print(f'---------------------------------------------------------------------------------------------------------------')
-    crossSol = exchangeSol
-    
-
-    beforeCrossSum = sum(crossSol.getDroneTourDistance(drone) for drone in crossSol.getDroneList())
-    beforeCrossScore = crossSol.getTimeScore()
-
-    print(f'Pre Cross tour sum distance of {beforeCrossSum} m with a time score of {beforeCrossScore} sec')
 
     start = time.time()
-    iterations = 0
-
-    for order in crossSol.getOrderList():
-        print(f'Calculating CrossSolutions for Order {order}')
-        while True:
-            iterations += 1
-            betterSolution = min(crossSol.getCrossSolutions(order, 0), key = lambda x: x.getTimeScore(), default = crossSol) #sum(x.getDroneTourDistance(y) for y in x.getDroneList()), default = crossSol)
-            #if sum(betterSolution.getDroneTourDistance(y) for y in betterSolution.getDroneList()) >= sum(crossSol.getDroneTourDistance(y) for y in crossSol.getDroneList()): break
-            if betterSolution.getTimeScore() >= crossSol.getTimeScore(): break
-            crossSol = betterSolution
-
-    for drone in crossSol.getDroneList():
-        print(f'Insert Charging order into CrossSolution fro drone {drone}')
-        if not crossSol.insertChargingOrders(drone): print(f'Corrupt Solution found ...')
-    
+    optimizedTabuSearchSolution = solver.performLocalSearch(tabuSearchSolution)
     end = time.time()
 
-    afterCrossSum = sum(crossSol.getDroneTourDistance(drone) for drone in crossSol.getDroneList())
-    afterCrossScore = crossSol.getTimeScore()
+    optimizedTabuSearchSolutionTourSum = sum(optimizedTabuSearchSolution.getDroneTourDistance(drone) for drone in optimizedTabuSearchSolution.getDroneList())
+    optimizedTabuSearchSolutionTimeScore = optimizedTabuSearchSolution.getTimeScore()
 
-    print(f'Calcualte the CrossSolutions in {(end - start) * 1000} ms with {iterations} iterations')
-    print(f'Tour sum distance changed from {beforeCrossSum} m to {afterCrossSum} m (Delta: {afterCrossSum - beforeCrossSum} m)')
-    print(f'Time score changed from {beforeCrossScore} sec to {afterCrossScore} sec (Delta: {afterCrossScore - beforeCrossScore} sec)')
+    print(f'Calcualte the OptimizedTabuSearchSolutions in {(end - start) * 1000} ms')
+    print(f'Tour sum distance changed from {tabuSearchSolutionTourSum} m to {optimizedTabuSearchSolutionTourSum} m (Delta: {optimizedTabuSearchSolutionTourSum - tabuSearchSolutionTourSum} m)')
+    print(f'Time score changed from {tabuSearchSolutionTimeScore} sec to {optimizedTabuSearchSolutionTimeScore} sec (Delta: {optimizedTabuSearchSolutionTimeScore - tabuSearchSolutionTimeScore} sec)')
 
     print(f'---------------------------------------------------------------------------------------------------------------')
 
     
-    for drone, orders in exchangeSol.getSolutionMatrix().items():
-        print(f'-> Drone (milageAvailable={drone.getRemainingFlightDistance()}, tourDistance={exchangeSol.getDroneTourDistance(drone)})')
+    for drone, orders in optimizedTabuSearchSolution.getSolutionMatrix().items():
+        print(f'-> Drone (milageAvailable={drone.getRemainingFlightDistance()}, tourDistance={optimizedTabuSearchSolution.getDroneTourDistance(drone)})')
         for order in orders:
             print(f'---> Order (destination={order.getDestination()})')
 
@@ -265,7 +171,7 @@ def main():
     # Print Initial Solution
     droneFlightFeatureList = []
 
-    for drone, orders in initalSol.getSolutionMatrix().items():
+    for drone, orders in initalSolution.getSolutionMatrix().items():
         droneFlightFeatureList.append(Feature(geometry=LineString(list(map(lambda x: x.getDestination().getCoordinates()[::-1], orders))), properties={ 'stroke': colorList[droneList.index(drone)], 'stroke-width': '3', 'stroke-opacity': 1 }))
 
     featureCollection = FeatureCollection([depotFeature] + chargingStationFeatureList + orderFeatureList + droneFlightFeatureList)
@@ -274,10 +180,10 @@ def main():
 
     print(f'---------------------------------------------------------------------------------------------------------------')
 
-    # Print 2Opt Solution
+    # Print LocalSearch Solution
     droneFlightFeatureList = []
 
-    for drone, orders in twoOptSol.getSolutionMatrix().items():
+    for drone, orders in localSearchSolution.getSolutionMatrix().items():
         droneFlightFeatureList.append(Feature(geometry=LineString(list(map(lambda x: x.getDestination().getCoordinates()[::-1], orders))), properties={ 'stroke': colorList[droneList.index(drone)], 'stroke-width': '3', 'stroke-opacity': 1 }))
 
     featureCollection = FeatureCollection([depotFeature] + chargingStationFeatureList + orderFeatureList + droneFlightFeatureList)
@@ -286,10 +192,10 @@ def main():
 
     print(f'---------------------------------------------------------------------------------------------------------------')
 
-    # Print Relocate Solution
+    # Print TabuSearch Solution
     droneFlightFeatureList = []
 
-    for drone, orders in relocateSol.getSolutionMatrix().items():
+    for drone, orders in tabuSearchSolution.getSolutionMatrix().items():
         droneFlightFeatureList.append(Feature(geometry=LineString(list(map(lambda x: x.getDestination().getCoordinates()[::-1], orders))), properties={ 'stroke': colorList[droneList.index(drone)], 'stroke-width': '3', 'stroke-opacity': 1 }))
 
     featureCollection = FeatureCollection([depotFeature] + chargingStationFeatureList + orderFeatureList + droneFlightFeatureList)
@@ -298,34 +204,10 @@ def main():
 
     print(f'---------------------------------------------------------------------------------------------------------------')
 
-    # Print Exchange Solution
+    # Print OptimizedTabuSearch Solution
     droneFlightFeatureList = []
 
-    for drone, orders in exchangeSol.getSolutionMatrix().items():
-        droneFlightFeatureList.append(Feature(geometry=LineString(list(map(lambda x: x.getDestination().getCoordinates()[::-1], orders))), properties={ 'stroke': colorList[droneList.index(drone)], 'stroke-width': '3', 'stroke-opacity': 1 }))
-
-    featureCollection = FeatureCollection([depotFeature] + chargingStationFeatureList + orderFeatureList + droneFlightFeatureList)
-
-    print(featureCollection)
-
-    print(f'---------------------------------------------------------------------------------------------------------------')
-
-    # Print Cross Solution
-    droneFlightFeatureList = []
-
-    for drone, orders in crossSol.getSolutionMatrix().items():
-        droneFlightFeatureList.append(Feature(geometry=LineString(list(map(lambda x: x.getDestination().getCoordinates()[::-1], orders))), properties={ 'stroke': colorList[droneList.index(drone)], 'stroke-width': '3', 'stroke-opacity': 1 }))
-
-    featureCollection = FeatureCollection([depotFeature] + chargingStationFeatureList + orderFeatureList + droneFlightFeatureList)
-
-    print(featureCollection)
-
-    print(f'---------------------------------------------------------------------------------------------------------------')
-
-    # Print Stage2 Solution
-    droneFlightFeatureList = []
-
-    for drone, orders in stage2Solution.getSolutionMatrix().items():
+    for drone, orders in optimizedTabuSearchSolution.getSolutionMatrix().items():
         droneFlightFeatureList.append(Feature(geometry=LineString(list(map(lambda x: x.getDestination().getCoordinates()[::-1], orders))), properties={ 'stroke': colorList[droneList.index(drone)], 'stroke-width': '3', 'stroke-opacity': 1 }))
 
     featureCollection = FeatureCollection([depotFeature] + chargingStationFeatureList + orderFeatureList + droneFlightFeatureList)
